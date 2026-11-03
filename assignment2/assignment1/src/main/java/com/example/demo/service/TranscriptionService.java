@@ -94,6 +94,15 @@ public class TranscriptionService {
 		map.add("timestamp_granularities[]", "word");
 		map.add("timestamp_granularities[]", "segment");
 
+		// Response from OpenAI object
+		WhisperResponse res = restClient.post()
+				.uri("/v1/audio/transcriptions")
+				.header("Authorization", "Bearer " + this.apiKey)
+				.contentType(MediaType.MULTIPART_FORM_DATA)
+				.body(map)
+				.retrieve()
+				.body(WhisperResponse.class);
+
 	}
 
 	private record OpenAITranscriptionResponse(String text, Usage usage) {};
@@ -164,9 +173,9 @@ public class TranscriptionService {
 					words.add(new Word(w.start(), w.end(), w.word()));
 				}
 			}
-			result.add(new Segment(seg.start(), seg.end(), seg.text().strip(), words));
+			list_of_segments.add(new Segment(seg.start(), seg.end(), seg.text().strip(), words));
 		}
-		return result;
+		return list_of_segments;
 	}
 
 	// only the fields of whisper's verbose_json we use
