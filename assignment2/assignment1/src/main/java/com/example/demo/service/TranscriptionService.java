@@ -36,7 +36,8 @@ public class TranscriptionService {
 				.connectTimeout(Duration.ofSeconds(5))
 				.build();
 		JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(httpclient); 
-		factory.setReadTimeout(Duration.ofSeconds(15));
+		// Whisper on a whole movie's audio track can take >= 1 min. Use 3 minutes to be safe as a buffer
+		factory.setReadTimeout(Duration.ofSeconds(180));
 		
 		this.restClient = RestClient.builder()
 				.baseUrl(baseUrl)
@@ -82,6 +83,19 @@ public class TranscriptionService {
 
 	}
 	
+	// transcribe the whole audio track of a video with whisper-1, with word and segment timings
+	public Subtitles transcribeSubtitles(MultipartFile audio) {
+		log.info("Received subtitle request. Audio size: " + audio.getSize() + " bytes");
+
+		MultiValueMap<String, Object> map = new LinkedMultiValueMap<>();
+		map.add("model", "whisper-1");
+		map.add("file", audio.getResource());
+		map.add("response_format", "verbose_json");
+		map.add("timestamp_granularities[]", "word");
+		map.add("timestamp_granularities[]", "segment");
+
+	}
+
 	private record OpenAITranscriptionResponse(String text, Usage usage) {};
 	
 	private record Usage(@JsonProperty("input_tokens") long inputTokens, @JsonProperty("output_tokens") long outputTokens) {}
