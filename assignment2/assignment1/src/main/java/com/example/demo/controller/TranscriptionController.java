@@ -63,4 +63,19 @@ public class TranscriptionController {
 
 		}, this.transcriptionExecutor);
 	}
+
+	// POST -> /api/v1/subtitles
+	private static ResponseEntity<?> subtitleError(int status, String error, String message) {
+		return ResponseEntity.status(status)
+			.contentType(MediaType.APPLICATION_JSON)
+			.body("""
+				{
+					"timestamp": "%s",
+					"status": %d,
+					"error": "%s",
+					"message": "%s",
+					"path": "/api/v1/subtitles"
+				}
+				""".formatted(java.time.Instant.now(), status, error, message));
+	}
 }
