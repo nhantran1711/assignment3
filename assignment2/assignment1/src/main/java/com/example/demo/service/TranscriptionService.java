@@ -2,6 +2,7 @@ package com.example.demo.service;
 
 import java.net.http.HttpClient;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -109,6 +110,28 @@ public class TranscriptionService {
 		}
 
 		return true;
+	}
+
+	// Keep only speech segments, and give each one the words spoken inside it
+	static List<Segment> buildSegments(WhisperResponse res) {
+		// Build a list of segments with words inside them
+		List<Segment> list_of_segments = new ArrayList<>();
+
+		// If the response has no words, return an empty list
+		List<WhisperWord> allWords;
+		if (res.words() == null) {
+			allWords = List.of();
+		} else {
+			allWords = res.words();
+		};
+		
+		// If the response has no segments, return an empty list
+		List<WhisperSegment> allSegments;
+		if (res.segments() == null) {
+			allSegments = List.of();
+		} else {
+			allSegments = res.segments();
+		};
 	}
 
 	// only the fields of whisper's verbose_json we use
