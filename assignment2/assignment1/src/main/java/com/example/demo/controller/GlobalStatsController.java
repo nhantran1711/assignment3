@@ -3,6 +3,8 @@ package com.example.demo.controller;
 import com.example.demo.model.GlobalStatsResponse;
 import com.example.demo.service.StatsService;
 
+import java.util.Map;
+
 import org.springframework.http.ResponseEntity;
 // REST Frameworks
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,6 +40,11 @@ public class GlobalStatsController {
                     }
                     """.formatted(java.time.Instant.now()));
 		}
+	}
 
+	// GET -> /usage  (total whisper seconds used, { "usage": s })
+	@GetMapping("/usage")
+	public ResponseEntity<Map<String, Double>> getUsage() {
+		return ResponseEntity.ok(Map.of("usage", statsService.getUsageSeconds()));
 	}
 }
