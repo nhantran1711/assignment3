@@ -140,6 +140,17 @@ public class TranscriptionService {
 				continue;
 			}
 			
+			// Build a list of words that are inside the segment
+			List<Word> words = new ArrayList<>();
+
+			// For each word, if it is inside the segment, add it to the list of words
+			for (WhisperWord w : allWords) {
+				
+				if (w.start() >= seg.start() && w.start() < seg.end()) {
+					words.add(new Word(w.start(), w.end(), w.word()));
+				}
+			}
+			result.add(new Segment(seg.start(), seg.end(), seg.text().strip(), words));
 		}
 		return result;
 	}
