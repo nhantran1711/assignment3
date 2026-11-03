@@ -103,6 +103,23 @@ public class TranscriptionService {
 				.retrieve()
 				.body(WhisperResponse.class);
 
+				
+		// If the response is null, throw an exception
+		if (res == null) {
+			throw new IllegalStateException("Whisper returned an empty body");
+		}
+		// If the response has no segments, throw an exception
+		if (res.segments() == null) {
+			throw new IllegalStateException("Whisper returned no segments");
+		}
+
+		statsService.addUsageSeconds(res.usageSeconds());
+
+		// Build segments from the response
+		List<Segment> segments = buildSegments(res);
+		log.info("Subtitle request succeeded. " + segments.size() + " segments, " + res.usageSeconds() + "s billed");
+		
+		return new Subtitles(res.duration(), segments);
 	}
 
 	private record OpenAITranscriptionResponse(String text, Usage usage) {};
@@ -140,7 +157,7 @@ public class TranscriptionService {
 		// Build a list of segments with words inside them
 		List<Segment> list_of_segments = new ArrayList<>();
 
-		// If the response has no words, return an empty list
+		// Whisper omits words/segments on silent audio -> treat as empty
 		List<WhisperWord> allWords;
 		if (res.words() == null) {
 			allWords = List.of();
