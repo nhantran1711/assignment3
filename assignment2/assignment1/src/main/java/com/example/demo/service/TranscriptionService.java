@@ -94,6 +94,22 @@ public class TranscriptionService {
 	// The words let the player split a long segment into 42 char lines at the right moment
 	public record Word(double start, double end, String word) {}
 
+	static boolean isSpeech(WhisperSegment seg) {
+		// Within the spec
+		boolean probablyNotSpeech = seg.noSpeechProb() > NO_SPEECH_LIMIT && seg.avgLogProb() < LOG_PROB_LIMIT;
+
+		// If the segment is probably not speech, return false
+		if (probablyNotSpeech) {
+			return false;
+		}
+
+		// If the segment has no text, return false
+		if (seg.text() == null || seg.text().isBlank()) {
+			return false;
+		}
+
+		return true;
+	}
 
 	// only the fields of whisper's verbose_json we use
 	record WhisperResponse(double duration, List<WhisperSegment> segments, List<WhisperWord> words, WhisperUsage usage) {
