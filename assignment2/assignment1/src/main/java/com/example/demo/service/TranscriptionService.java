@@ -132,6 +132,16 @@ public class TranscriptionService {
 		} else {
 			allSegments = res.segments();
 		};
+
+		// For each segment
+		for (WhisperSegment seg : allSegments) {
+			// If the segment is not speech, skip it
+			if (!isSpeech(seg)) {
+				continue;
+			}
+			
+		}
+		return result;
 	}
 
 	// only the fields of whisper's verbose_json we use
