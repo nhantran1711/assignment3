@@ -2,6 +2,7 @@ package com.example.demo.service;
 
 import java.net.http.HttpClient;
 import java.time.Duration;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,6 +81,22 @@ public class TranscriptionService {
 	private record OpenAITranscriptionResponse(String text, Usage usage) {};
 	
 	private record Usage(@JsonProperty("input_tokens") long inputTokens, @JsonProperty("output_tokens") long outputTokens) {}
-	
-	
+
+	// only the fields of whisper's verbose_json we use
+	record WhisperResponse(double duration, List<WhisperSegment> segments, List<WhisperWord> words, WhisperUsage usage) {
+
+		// whisper-1 bills by audio seconds. Use the usage block if present, otherwise the audio duration
+		double usageSeconds() {
+			if (usage != null && usage.seconds() > 0) {
+				return usage.seconds();
+			};
+			return duration;
+		}
+	}
+
+	record WhisperSegment(double start, double end, String text, @JsonProperty("avg_logprob") double avgLogProb, @JsonProperty("no_speech_prob") double noSpeechProb) {}
+
+	record WhisperWord(double start, double end, String word) {}
+
+	record WhisperUsage(String type, double seconds) {}
 }
