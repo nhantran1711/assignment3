@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Speech to Text</title>
+
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+	<main class="container">
+
+    	<h1>Speech to Text</h1>
+
+    	<p id="status" aria-live="polite" role="status">Ready to record</p>
+
+    	<div class="buttons">
+
+        	<button id="recordButton" aria-pressed="false">
+            	Start Recording
+        	</button>
+
+        	<button id="stopButton" disabled aria-pressed="false">
+            	Stop Recording
+        	</button>
+
+    	</div>
+
+    	<section class="result">
+
+        	<h2>Transcription</h2>
+
+        	<p id="transcription" aria-live="polite">Your transcription will appear here.</p>
+
+    	</section>
+	</main>
+
+
+	<script src="script.js"></script>
+</body>
+
+</html>
