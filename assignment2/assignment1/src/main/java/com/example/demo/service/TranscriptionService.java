@@ -19,6 +19,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @Service
 public class TranscriptionService {
 	
+	// No subtitles for segments with noSpeechProb > 0.6 & aveLogProb < -1.0
+	private static final double NO_SPEECH_LIMIT = 0.6;
+	private static final double LOG_PROB_LIMIT = -1.0;
 	
 	private final String apiKey;
 	private final RestClient restClient;
@@ -81,6 +84,16 @@ public class TranscriptionService {
 	private record OpenAITranscriptionResponse(String text, Usage usage) {};
 	
 	private record Usage(@JsonProperty("input_tokens") long inputTokens, @JsonProperty("output_tokens") long outputTokens) {}
+
+	// POST /api/v1/subtitles sends back to the player
+	// Times are seconds from the start of the media
+	public record Subtitles(double duration, List<Segment> segments) {}
+
+	public record Segment(double start, double end, String text, List<Word> words) {}
+
+	// The words let the player split a long segment into 42 char lines at the right moment
+	public record Word(double start, double end, String word) {}
+
 
 	// only the fields of whisper's verbose_json we use
 	record WhisperResponse(double duration, List<WhisperSegment> segments, List<WhisperWord> words, WhisperUsage usage) {
