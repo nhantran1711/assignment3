@@ -28,6 +28,23 @@ public class SubtitleClient {
 	static byte[] extractAudio(File videoFile) throws Exception {
 		ByteArrayOutputStream mp3Bytes = new ByteArrayOutputStream();
 
+		// try-with-resources: both get closed automatically at the end, even if something throws
+		try (FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(videoFile);
+			
+			FFmpegFrameRecorder recorder = createMp3Recorder(mp3Bytes)) {
+
+			grabber.start();
+			recorder.start();
+
+			// Read the audio frames from the video and write them to the mp3 recorder
+			Frame audioFrame = grabber.grabSamples();
+
+			while (audioFrame != null) {
+				recorder.record(audioFrame);
+				audioFrame = grabber.grabSamples();
+			}
+		}
+
 		// The recorder is closed now, so all of the mp3 has been written out
 		return mp3Bytes.toByteArray();
 	}
@@ -41,7 +58,7 @@ public class SubtitleClient {
 		recorder.setAudioCodec(avcodec.AV_CODEC_ID_MP3);
 		recorder.setSampleRate(SAMPLE_RATE);
 		recorder.setAudioBitrate(BITRATE);
-		
+
 		return recorder;
 	}
 }
