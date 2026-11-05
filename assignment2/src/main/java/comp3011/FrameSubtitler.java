@@ -36,6 +36,20 @@ public class FrameSubtitler extends FrameProcessor {
 	@Override
 	public void process(Frame frame, InfoFrame info) throws Exception {
 
+		SubtitleClient.Subtitles current = this.subtitles;
+		
+		// If the user has switched off subtitles, or the subtitles haven't arrived yet
+		if (!enabled || current == null) {
+			return; 
+		}
+
+		// Get the text of the segment being spoken at this frame's timestamp
+		String text = textAt(current, info.timestampUs() / 1_000_000.0);
+		if (text == null) {
+			return; 
+		}
+
+		// Drawing the text onto the frame
 	}
 
 	// The text of the segment being spoken at this time, or null in a gap between segments
