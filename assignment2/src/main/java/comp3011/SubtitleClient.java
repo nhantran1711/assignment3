@@ -11,6 +11,7 @@ package comp3011;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 
 import org.bytedeco.ffmpeg.global.avcodec;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
@@ -23,6 +24,9 @@ public class SubtitleClient {
 	private static final int MONO = 1;
 	private static final int SAMPLE_RATE = 16000;
 	private static final int BITRATE = 32000;
+
+	// Marks where the file starts and ends inside the request body
+	private static final String BOUNDARY = "boundary";
 
 	// Read only the audio from the video file and return it as a small mono mp3 (kept in memory)
 	static byte[] extractAudio(File videoFile) throws Exception {
@@ -60,5 +64,24 @@ public class SubtitleClient {
 		recorder.setAudioBitrate(BITRATE);
 
 		return recorder;
+	}
+
+
+
+	// Create a multipart/form-data request body containing the given mp3 bytes
+	private static byte[] multipartBody(byte[] mp3) {
+		// The request body is just a header, the mp3 bytes, and a footer
+		String header = "--" + BOUNDARY + "\r\n"
+				+ "Content-Disposition: form-data; name=\"audio\"; filename=\"audio.mp3\"\r\n"
+				+ "Content-Type: audio/mpeg\r\n"
+				+ "\r\n";
+		String footer = "\r\n--" + BOUNDARY + "--\r\n";
+
+		ByteArrayOutputStream body = new ByteArrayOutputStream();
+		body.writeBytes(header.getBytes(StandardCharsets.UTF_8));
+		body.writeBytes(mp3);
+		body.writeBytes(footer.getBytes(StandardCharsets.UTF_8));
+		
+		return body.toByteArray();
 	}
 }
