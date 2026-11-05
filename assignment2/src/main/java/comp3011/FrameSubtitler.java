@@ -33,4 +33,21 @@ public class FrameSubtitler extends FrameProcessor {
 		return enabled;
 	}
 
+	@Override
+	public void process(Frame frame, InfoFrame info) throws Exception {
+
+	}
+
+	// The text of the segment being spoken at this time, or null in a gap between segments
+	private static String textAt(SubtitleClient.Subtitles subs, double seconds) {
+
+		for (SubtitleClient.Segment segment : subs.segments()) {
+
+			// If the current time is inside this segment, return its text
+			if (seconds >= segment.start() && seconds < segment.end()) {
+				return segment.text();
+			}
+		}
+		return null;
+	}
 }
