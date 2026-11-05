@@ -18,11 +18,15 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.List;
 
 import org.bytedeco.ffmpeg.global.avcodec;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.FFmpegFrameRecorder;
 import org.bytedeco.javacv.Frame;
+
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.json.JsonMapper;
 
 public class SubtitleClient {
 
@@ -35,6 +39,13 @@ public class SubtitleClient {
 	private static final String BOUNDARY = "boundary";
 
 	private static final URI SUBTITLES_URL = URI.create("http://localhost:8080/api/v1/subtitles");
+
+
+	// Same shape as the server's Transcription Service. 
+	// Times are seconds from the start of the media
+	public record Subtitles(double duration, List<Segment> segments) {}
+	public record Segment(double start, double end, String text, List<Word> words) {}
+	public record Word(double start, double end, String word) {}
 
 	// The HTTP client is reused for all requests, and has a 5s connection timeout
 	private static final HttpClient HTTP = HttpClient.newBuilder()
@@ -118,5 +129,19 @@ public class SubtitleClient {
 		}
 
 		return res.body();
+	}
+
+	// Don't break if the server adds new fields later
+	private static final JsonMapper JSON = JsonMapper.builder()
+			.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+			.build();
+
+	// Extract the audio from the video, send it to the server, and parse the JSON reply into a Subtitles object
+	public static Subtitles fetchSubtitles(File videoFile) throws Exception {
+
+		byte[] mp3 = extractAudio(videoFile);
+		String json = postAudio(mp3);
+
+		return JSON.readValue(json, Subtitles.class);
 	}
 }
