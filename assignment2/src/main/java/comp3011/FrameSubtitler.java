@@ -84,7 +84,21 @@ public class FrameSubtitler extends FrameProcessor {
 		Graphics2D g = image.createGraphics();
 		g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 		g.setFont(font);
-		
+
+		// The x,y coordinates for drawString function
+		int x = outline;
+		int y = outline + metrics.getAscent(); // drawString's y is the text's baseline, not its top
+
+		// Draw the black outline first, in a square around the text's middle
+		g.setColor(Color.BLACK);
+
+		// Draw the text multiple times, offset by the outline thickness in all directions
+		for (int dx = -outline; dx <= outline; dx++) {
+			for (int dy = -outline; dy <= outline; dy++) {
+				g.drawString(text, x + dx, y + dy);
+			}
+		}
+
 		return image;
 	}
 
