@@ -138,6 +138,11 @@ public class FrameSubtitler extends FrameProcessor {
 			}
 		}
 
+		// Draw the white text on top of the outline
+		g.setColor(Color.WHITE);
+		g.drawString(text, x, y);
+		g.dispose();
+
 		return image;
 	}
 
