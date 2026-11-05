@@ -50,6 +50,9 @@ public class SubtitleClient {
 			
 			FFmpegFrameRecorder recorder = createMp3Recorder(mp3Bytes)) {
 
+			// Configure the grabber to read only the audio track, and the recorder to write mono 16kHz mp3
+			grabber.setAudioChannels(MONO);
+			grabber.setSampleRate(SAMPLE_RATE);
 			grabber.start();
 			recorder.start();
 
