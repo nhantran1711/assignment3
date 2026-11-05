@@ -31,6 +31,7 @@ import org.bytedeco.javacv.FrameGrabber;
 import org.bytedeco.javacv.JavaFXFrameConverter;
 
 import javafx.animation.AnimationTimer;
+import javafx.application.Platform;
 
 import javafx.scene.image.Image;
 
@@ -93,6 +94,9 @@ public class VideoPlayerModel {
     private static final long AUDIO_LEAD_NS = 30_000_000L;   // write audio slightly ahead of the clock, as the original did
 
     private AudioPlayer audioPlayer; // the sound line
+
+    // A3: written once by the subtitle-fetcher thread, read by others -> volatile so they see the finished value
+    private volatile SubtitleClient.Subtitles subtitles;
     private Audio pendingChunk;
     private int pendingOffset;
 
@@ -118,7 +122,34 @@ public class VideoPlayerModel {
         videoFile = file;
         videoDurationUs = NO_SEEK_REQUEST;
         videoFrameDurationUs = 0;
-        startPlayback(0, false, NO_SEEK_REQUEST);
+        fetchSubtitlesThenPlay(file);
+    }
+
+    // transcribe the whole video BEFORE playing. Done on a background thread so the window doesn't freeze,
+    private void fetchSubtitlesThenPlay(File file) {
+
+        notifyStatusChanged("Generating subtitles...");
+
+        // This thread will fetch the subtitles, then start playback. It is a daemon thread so that it doesn't prevent the program from exiting if the user closes the window before it finishes.
+        Thread fetcher = new Thread(() -> {
+            try {
+
+                subtitles = SubtitleClient.fetchSubtitles(file);
+                
+                for (SubtitleClient.Segment segment : subtitles.segments()) {
+                    System.out.printf("%7.2f - %7.2f  %s%n", segment.start(), segment.end(), segment.text());
+                }
+
+            } catch (Exception e) {
+                System.err.println("No subtitles, playing without them: " + e.getMessage());
+            }
+            
+            Platform.runLater(() -> startPlayback(0, false, NO_SEEK_REQUEST));
+        
+        }, "subtitle-fetcher");
+
+        fetcher.setDaemon(true);
+        fetcher.start();
     }
 
     public void startOver() {
