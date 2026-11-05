@@ -67,6 +67,7 @@ public class FrameSubtitler extends FrameProcessor {
 			cachedImage = renderText(text);
 		}
 
+		drawOnto(frame, cachedImage);
 	}
 
 	// Draw the text image onto the video frame, centered horizontally and near the bottom
@@ -90,6 +91,18 @@ public class FrameSubtitler extends FrameProcessor {
 				int argb = textImage.getRGB(col, row);
 				int alpha = argb >>> 24;
 
+				// If the text pixel is mostly transparent, or the video pixel is outside the frame, skip it
+				if (alpha < 128 || x < 0 || x >= width || y < 0) {
+					continue; 
+				}
+
+				// Calculated based on the row, column, stride, and number of channels
+				int base = y * videoInfo.imageStride() + x * videoInfo.imageChannels();
+
+				// The text image's pixel is in ARGB order, but the video frame's pixel is in BGR order, so we need to swap the channels
+				for (int c = 0; c < 3; c++) {
+					pixels.put(base + c, (byte) (argb >> (8 * c)));
+				}
 			}
 		}
 	}
