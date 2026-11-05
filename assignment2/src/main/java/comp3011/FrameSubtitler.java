@@ -16,10 +16,15 @@ import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.bytedeco.javacv.Frame;
 
 public class FrameSubtitler extends FrameProcessor {
+
+	// At most 42 characters per line
+	private static final int MAX_LINE = 42;
 
 	// Set from other threads (subtitle-fetcher, JavaFX button) but read on a pipeline thread -> volatile
 	private volatile SubtitleClient.Subtitles subtitles;
@@ -142,6 +147,9 @@ public class FrameSubtitler extends FrameProcessor {
 			int y = outline + i * lineHeight + metrics.getAscent(); 
 			drawOutlined(g, lines[i], x, y, outline);
 		}
+	
+		g.dispose();
+
 
 		return image;
 	}
@@ -156,6 +164,15 @@ public class FrameSubtitler extends FrameProcessor {
 		}
 		g.setColor(Color.WHITE);
 		g.drawString(line, x, y);
+	}
+
+
+	// Split the text into lines, each at most MAX_LINE characters long, breaking at whitespace and punctuation
+	static List<String> splitLines(String text) {
+		List<String> lines = new ArrayList<>();
+		String line = "";
+
+		return lines;
 	}
 
 	// The text of the segment being spoken at this time, or null in a gap between segments
