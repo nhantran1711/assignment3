@@ -20,6 +20,7 @@ package comp3011;
 
 import java.io.File;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import java.util.function.BiConsumer;
@@ -95,8 +96,8 @@ public class VideoPlayerModel {
 
     private AudioPlayer audioPlayer; // the sound line
 
-    // A3: written once by the subtitle-fetcher thread, read by others -> volatile so they see the finished value
-    private volatile SubtitleClient.Subtitles subtitles;
+    // draws the subtitles. Always in the pipeline, even without -S, so the button can switch it on later
+    private final FrameSubtitler subtitler = new FrameSubtitler(false);
     private Audio pendingChunk;
     private int pendingOffset;
 
@@ -114,7 +115,11 @@ public class VideoPlayerModel {
         this.statusChangedHandler = statusChangedHandler;
         this.playbackStateChangedHandler = playbackStateChangedHandler;
         this.audioOutputStateChangedHandler = audioOutputStateChangedHandler;
-        this.frameProcessors = List.copyOf(frameProcessors);
+
+        // Subtitler is always in the pipeline, even if the user hasn't requested subtitles yet, so that the button can switch it on later. The subtitler will just do nothing until the subtitles arrive from the server.
+        List<FrameProcessor> all = new ArrayList<>(frameProcessors);
+        all.add(subtitler);
+        this.frameProcessors = List.copyOf(all);
 
     }
 
@@ -134,8 +139,9 @@ public class VideoPlayerModel {
         Thread fetcher = new Thread(() -> {
             try {
 
-                subtitles = SubtitleClient.fetchSubtitles(file);
-                
+                SubtitleClient.Subtitles subtitles = SubtitleClient.fetchSubtitles(file);
+                subtitler.setSubtitles(subtitles); // hand them to the pipeline thread
+
                 for (SubtitleClient.Segment segment : subtitles.segments()) {
                     System.out.printf("%7.2f - %7.2f  %s%n", segment.start(), segment.end(), segment.text());
                 }
