@@ -15,6 +15,7 @@ import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
+import java.nio.ByteBuffer;
 
 import org.bytedeco.javacv.Frame;
 
@@ -66,6 +67,19 @@ public class FrameSubtitler extends FrameProcessor {
 			cachedImage = renderText(text);
 		}
 
+	}
+
+	// Draw the text image onto the video frame, centered horizontally and near the bottom
+	private void drawOnto(Frame frame, BufferedImage textImage) {
+		// The frame's pixels are in a ByteBuffer, in BGR order
+		ByteBuffer pixels = (ByteBuffer) frame.image[0];
+
+		// The text is drawn onto the video frame, centered horizontally and near the bottom
+		int width = videoInfo.imageWidth();
+		int left = (width - textImage.getWidth()) / 2;
+		int top = videoInfo.imageHeight() - textImage.getHeight() - videoInfo.imageHeight() / 12;
+
+		
 	}
 
 	// White bold sans-serif text with a black outline, on a transparent background
