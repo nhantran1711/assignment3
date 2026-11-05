@@ -115,35 +115,47 @@ public class FrameSubtitler extends FrameProcessor {
 		int outline = Math.max(1, fontSize / 16); // outline thickness in pixels
 		Font font = new Font(Font.SANS_SERIF, Font.BOLD, fontSize);
 
-		// Measure the text, then make the image just big enough for it plus the outline
-		FontMetrics metrics = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB).createGraphics().getFontMetrics(font);
-		BufferedImage image = new BufferedImage(metrics.stringWidth(text) + 2 * outline, metrics.getHeight() + 2 * outline, BufferedImage.TYPE_INT_ARGB);
+		// A subtitle can have 2 lines, split at "\n"
+		String[] lines = text.split("\n");
 
-		// Draw the text with an outline onto the image
+		// Measure every line. The image is as wide as the longest line, and as tall as all the lines, plus the outline
+		FontMetrics metrics = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB).createGraphics().getFontMetrics(font);
+		
+		// Longest line, and as tall as all the lines, plus the outline
+		int widest = 0;
+		for (String line : lines) {
+			widest = Math.max(widest, metrics.stringWidth(line));
+		}
+
+		int lineHeight = metrics.getHeight();
+		BufferedImage image = new BufferedImage(widest + 2 * outline, lines.length * lineHeight + 2 * outline, BufferedImage.TYPE_INT_ARGB);
+
 		Graphics2D g = image.createGraphics();
 		g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 		g.setFont(font);
 
-		// The x,y coordinates for drawString function
-		int x = outline;
-		int y = outline + metrics.getAscent(); // drawString's y is the text's baseline, not its top
+		// Each line is centred, and placed one line height below the one before
+		for (int i = 0; i < lines.length; i++) {
 
-		// Draw the black outline first, in a square around the text's middle
-		g.setColor(Color.BLACK);
-
-		// Draw the text multiple times, offset by the outline thickness in all directions
-		for (int dx = -outline; dx <= outline; dx++) {
-			for (int dy = -outline; dy <= outline; dy++) {
-				g.drawString(text, x + dx, y + dy);
-			}
+			// The x coordinate is the left edge of the text, so that the text is centred in the image
+			int x = outline + (widest - metrics.stringWidth(lines[i])) / 2;
+			int y = outline + i * lineHeight + metrics.getAscent(); 
+			drawOutlined(g, lines[i], x, y, outline);
 		}
 
-		// Draw the white text on top of the outline
-		g.setColor(Color.WHITE);
-		g.drawString(text, x, y);
-		g.dispose();
-
 		return image;
+	}
+
+	// Draw one line of white text with a black outline: black copies in a square around it, then white on top
+	private static void drawOutlined(Graphics2D g, String line, int x, int y, int outline) {
+		g.setColor(Color.BLACK);
+		for (int dx = -outline; dx <= outline; dx++) {
+			for (int dy = -outline; dy <= outline; dy++) {
+				g.drawString(line, x + dx, y + dy);
+			}
+		}
+		g.setColor(Color.WHITE);
+		g.drawString(line, x, y);
 	}
 
 	// The text of the segment being spoken at this time, or null in a gap between segments
