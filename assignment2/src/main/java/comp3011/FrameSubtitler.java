@@ -79,7 +79,19 @@ public class FrameSubtitler extends FrameProcessor {
 		int left = (width - textImage.getWidth()) / 2;
 		int top = videoInfo.imageHeight() - textImage.getHeight() - videoInfo.imageHeight() / 12;
 
-		
+		// Draw the text image onto the video frame, blending with the video pixels based on the text's alpha channel
+		for (int row = 0; row < textImage.getHeight(); row++) {
+			for (int col = 0; col < textImage.getWidth(); col++) {
+
+				// The text image's pixel at (col,row) is drawn onto the video frame at (left+col, top+row)
+				int x = left + col;
+				int y = top + row;
+				
+				int argb = textImage.getRGB(col, row);
+				int alpha = argb >>> 24;
+
+			}
+		}
 	}
 
 	// White bold sans-serif text with a black outline, on a transparent background
