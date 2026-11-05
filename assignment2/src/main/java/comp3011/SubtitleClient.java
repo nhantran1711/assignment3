@@ -11,7 +11,13 @@ package comp3011;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 
 import org.bytedeco.ffmpeg.global.avcodec;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
@@ -27,6 +33,13 @@ public class SubtitleClient {
 
 	// Marks where the file starts and ends inside the request body
 	private static final String BOUNDARY = "boundary";
+
+	private static final URI SUBTITLES_URL = URI.create("http://localhost:8080/api/v1/subtitles");
+
+	// The HTTP client is reused for all requests, and has a 5s connection timeout
+	private static final HttpClient HTTP = HttpClient.newBuilder()
+			.connectTimeout(Duration.ofSeconds(5))
+			.build();
 
 	// Read only the audio from the video file and return it as a small mono mp3 (kept in memory)
 	static byte[] extractAudio(File videoFile) throws Exception {
@@ -83,5 +96,24 @@ public class SubtitleClient {
 		body.writeBytes(footer.getBytes(StandardCharsets.UTF_8));
 		
 		return body.toByteArray();
+	}
+
+	// Send the mp3 to the web server and return its JSON reply as text
+	static String postAudio(byte[] mp3) throws IOException, InterruptedException {
+
+		HttpRequest req = HttpRequest.newBuilder(SUBTITLES_URL)
+				.header("Content-Type", "multipart/form-data; boundary=" + BOUNDARY)
+				.timeout(Duration.ofSeconds(200))
+				.POST(HttpRequest.BodyPublishers.ofByteArray(multipartBody(mp3)))
+				.build();
+
+		HttpResponse<String> res = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
+
+		// If the server didn't reply with 200 OK, throw an exception with the status code and body
+		if (res.statusCode() != 200) {
+			throw new IOException("Subtitle server replied " + res.statusCode() + ": " + res.body());
+		}
+
+		return res.body();
 	}
 }
