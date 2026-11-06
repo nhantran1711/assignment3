@@ -172,6 +172,33 @@ public class FrameSubtitler extends FrameProcessor {
 		List<String> lines = new ArrayList<>();
 		String line = "";
 
+		// Split the text into words, and add them to the current line until it would exceed MAX_LINE characters
+		for (String word : text.trim().split("\\s+")) {
+			// The word doesn't fit on this line -> finish the line, and start a new one with the word
+			if (!line.isEmpty() && line.length() + 1 + word.length() > MAX_LINE) {
+				lines.add(line);
+				line = word;
+			} 
+			// The line is empty -> start it with the word
+			else if (line.isEmpty()) {
+				line = word;
+			} 
+			// The word fits on this line -> add it to the line with a space
+			else {
+				line = line + " " + word;
+			}
+
+			// If the line is already half full, and the word ends with punctuation, finish the line early to avoid a long pause before the next subtitle
+			if (line.length() >= MAX_LINE / 2 && word.matches(".*[,.?!;:]")) {
+				lines.add(line);
+				line = "";
+			}
+		}
+
+		// Add the last line if it's not empty
+		if (!line.isEmpty()) {
+			lines.add(line);
+		}
 		return lines;
 	}
 
