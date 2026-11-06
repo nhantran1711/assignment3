@@ -34,6 +34,7 @@ public class VideoPlayerController {
 
     public VideoPlayerController(
             boolean audioEnabled,
+            boolean subtitlesEnabled,
             List<FrameProcessor> frameProcessors ,
             BiConsumer<Integer, Integer> videoSizeChangedHandler) {
         this.view = new VideoPlayerView();
@@ -46,7 +47,7 @@ public class VideoPlayerController {
                 this::onStatusChanged,
                 this::onPlaybackStateChanged,
                 this::onAudioOutputStateChanged);
-
+        model.setSubtitlesEnabled(subtitlesEnabled); 
         view.getStartOverButton().setOnAction(_ -> startOver());
         view.getBackFiveButton().setOnAction(_ -> backFiveSeconds());
         view.getPausePlayButton().setOnAction(_ -> togglePause());
