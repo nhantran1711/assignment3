@@ -28,6 +28,10 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Polygon;
+import javafx.scene.shape.Rectangle;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.scene.text.Text;
 import javafx.scene.shape.SVGPath;
 import javafx.scene.shape.StrokeLineCap;
 
@@ -57,6 +61,7 @@ public class VideoPlayerView {
     private final Button forwardFiveButton;
     private final Button stopButton;
     private final Button audioButton;
+    private final Button subtitleButton; // A3: subtitles on/off, right of the mute button
 
     public VideoPlayerView() {
         imageView.setPreserveRatio(true);
@@ -75,6 +80,7 @@ public class VideoPlayerView {
         forwardFiveButton = iconButton(createLoopIcon(true, "5"));
         stopButton = iconButton(createStopIcon());
         audioButton = iconButton(createAudioIcon(false));
+        subtitleButton = iconButton(createSubtitleIcon(false));
         setPlaybackControlsDisabled(true);
 
         HBox controls = new HBox(
@@ -85,6 +91,7 @@ public class VideoPlayerView {
                 forwardFiveButton,
                 stopButton,
                 audioButton,
+                subtitleButton,
                 statusLabel);
 
         controls.setPadding(new Insets(10));
@@ -127,6 +134,14 @@ public class VideoPlayerView {
         return audioButton;
     }
 
+    public Button getSubtitleButton() {
+        return subtitleButton;
+    }
+
+    public void showSubtitlesEnabled(boolean subtitlesEnabled) {
+        subtitleButton.setGraphic(createSubtitleIcon(subtitlesEnabled));
+    }
+
     public void setStatus(String status) {
         statusLabel.setText(status);
     }
@@ -158,6 +173,7 @@ public class VideoPlayerView {
         forwardFiveButton.setDisable(disabled);
         stopButton.setDisable(disabled);
         audioButton.setDisable(disabled);
+        subtitleButton.setDisable(disabled);
     }
 
     // There are a bunch of tooltip handling methods starting from here. We want to use tooltips so that people with
@@ -169,6 +185,7 @@ public class VideoPlayerView {
         setButtonTooltip(forwardFiveButton, "[RIGHT]");
         setButtonTooltip(stopButton, "[ESC]");
         setButtonTooltip(audioButton, "[A]");
+        setButtonTooltip(subtitleButton, "[S]");
     }
 
     private void setButtonTooltip(Button button, String text) {
@@ -306,6 +323,23 @@ public class VideoPlayerView {
         gc.setFill(Color.BLACK);
         gc.fillRect(9, 9, 11, 11);
         return canvas;
+    }
+
+    // create a subtitle icon with "CC" text, and a line through it if subtitles are disabled
+    private Node createSubtitleIcon(boolean subtitlesEnabled) {
+
+        Rectangle box = new Rectangle(3, 7, 22, 14);
+        
+        // The box is a rounded rectangle with a black outline and no fill
+        box.setFill(null);
+        box.setStroke(Color.BLACK);
+        box.setStrokeWidth(2.0);
+        box.setArcWidth(5);
+        box.setArcHeight(5);
+
+        Text cc = new Text(6.5, 18, "CC");
+        cc.setFont(Font.font("SansSerif", FontWeight.BOLD, 10));
+
     }
 
     // Kind of speaker looking thing ...
