@@ -215,8 +215,47 @@ public class FrameSubtitler extends FrameProcessor {
 	// Each segment is split into lines, lines grouped into cues
 	// Cues are timed by segment's duration, but within the MIN and MAX duration
 	static List<Cue> buildCues(SubtitleClient.Subtitles subs) {
+
 		List<Cue> cues = new ArrayList<>();
 
+		// Each segment is split into lines, lines grouped into cues
+		for (SubtitleClient.Segment segment : subs.segments()) {
+
+			// Split the segment's text into lines, and calculate how long each character is spoken for
+			List<String> lines = splitLines(segment.text());
+			double secondsPerChar = (segment.end() - segment.start()) / String.join("", lines).length();
+			double time = segment.start();
+
+			// Each cue is one or two lines, and is shown for the time it takes to speak the characters, but clamped to MIN and MAX duration
+			for (int i = 0; i < lines.size(); i += 2) {
+				String text = lines.get(i);
+				int characters = lines.get(i).length();
+
+				// If there is a second line, add it to the cue with a newline
+				if (i + 1 < lines.size()) {
+					text = text + "\n" + lines.get(i + 1);
+					characters += lines.get(i + 1).length();
+				}
+
+				// How long it takes to speak this cue's characters
+				double spokenFor = characters * secondsPerChar;
+
+				// Keep it on screen for at least 1s and at most 7s
+				double shownFor = spokenFor;
+				if (shownFor < MIN_SECONDS) {
+					shownFor = MIN_SECONDS;
+				}
+				if (shownFor > MAX_SECONDS) {
+					shownFor = MAX_SECONDS;
+				}
+				
+				// Add the cue to the list, with the start time, end time, and text
+				cues.add(new Cue(time, time + shownFor, text));
+
+				// The next cue starts after this one ends, but the time is based on how long it takes to speak the characters, not how long it was shown for
+				time += spokenFor;
+			}
+		}
 		return cues;
 	}
 
