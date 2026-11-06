@@ -25,9 +25,17 @@ public class FrameSubtitler extends FrameProcessor {
 
 	// At most 42 characters per line
 	private static final int MAX_LINE = 42;
+	
+	// At least 1 second, at most 7 seconds
+	private static final double MIN_SECONDS = 1.0;
+	private static final double MAX_SECONDS = 7.0;
+
+	// A subtitle cue: the text, and the start and end times in seconds
+	record Cue(double start, double end, String text) {}
+
 
 	// Set from other threads (subtitle-fetcher, JavaFX button) but read on a pipeline thread -> volatile
-	private volatile SubtitleClient.Subtitles subtitles;
+	private volatile List<Cue> cues;
 	private volatile boolean enabled;
 
 	// Cache for the current subtitle. 1 pipeline thread -> no locking
@@ -39,7 +47,7 @@ public class FrameSubtitler extends FrameProcessor {
 	}
 
 	public void setSubtitles(SubtitleClient.Subtitles subtitles) {
-		this.subtitles = subtitles;
+		this.cues = buildCues(subtitles); // laid out once, on the fetcher thread, not on every frame
 	}
 
 	public void setEnabled(boolean enabled) {
@@ -53,7 +61,7 @@ public class FrameSubtitler extends FrameProcessor {
 	@Override
 	public void process(Frame frame, InfoFrame info) throws Exception {
 
-		SubtitleClient.Subtitles current = this.subtitles;
+		List<Cue> current = this.cues;
 		
 		// If the user has switched off subtitles, or the subtitles haven't arrived yet
 		if (!enabled || current == null) {
@@ -202,14 +210,23 @@ public class FrameSubtitler extends FrameProcessor {
 		return lines;
 	}
 
-	// The text of the segment being spoken at this time, or null in a gap between segments
-	private static String textAt(SubtitleClient.Subtitles subs, double seconds) {
 
-		for (SubtitleClient.Segment segment : subs.segments()) {
+	// Build a list of cues from the subtitle segments
+	// Each segment is split into lines, lines grouped into cues
+	// Cues are timed by segment's duration, but within the MIN and MAX duration
+	static List<Cue> buildCues(SubtitleClient.Subtitles subs) {
+		List<Cue> cues = new ArrayList<>();
 
-			// If the current time is inside this segment, return its text
-			if (seconds >= segment.start() && seconds < segment.end()) {
-				return segment.text();
+		return cues;
+	}
+
+	// Return the text of the subtitle being spoken at the given time, or null if there is none
+	private static String textAt(List<Cue> cues, double seconds) {
+
+		for (Cue cue : cues) {
+			// The cue is active if the current time is between its start and end times
+			if (seconds >= cue.start() && seconds < cue.end()) {
+				return cue.text();
 			}
 		}
 		return null;
