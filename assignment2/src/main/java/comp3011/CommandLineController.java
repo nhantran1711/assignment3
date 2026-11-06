@@ -32,6 +32,7 @@ public class CommandLineController {
     private boolean helpRequested;
     private boolean audioRequested;
     private boolean maximiseRequested;
+    private boolean subtitlesRequested; // A3: -S, subtitles start switched on
     private Integer displayId;
     private File videoFile;
     private String errorMessage;
@@ -72,6 +73,10 @@ public class CommandLineController {
 
     public boolean isMaximiseRequested() {
         return maximiseRequested;
+    }
+
+    public boolean isSubtitlesRequested() {
+        return subtitlesRequested;
     }
 
     public boolean shouldLaunchApplication() {
@@ -123,6 +128,9 @@ public class CommandLineController {
     	} else if (option.equals("-x") || option.equals("--maximise")) {
     		
     	    maximiseRequested = true;
+    	} else if (option.equals("-S") || option.equals("--subtitle-frames")) {
+
+    	    subtitlesRequested = true;
     	} else if (option.equals("-1") || option.equals("--monitor-1")) {
     	
     	    setDisplayId(1);
@@ -201,6 +209,7 @@ public class CommandLineController {
         System.out.println("  -h, --help         Show this help message");
         System.out.println("  -a, --audio        Play audio");
         System.out.println("  -x, --maximise     Open the player maximised");
+        System.out.println("  -S, --subtitle-frames  Start with subtitles switched on");
         System.out.println("  -1, --monitor-1    Open the player on display 1");
         System.out.println("  -2, --monitor-2    Open the player on display 2");
         System.out.println();
