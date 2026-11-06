@@ -123,6 +123,15 @@ public class VideoPlayerModel {
 
     }
 
+    // Subtitles on/off. Only flips a volatile flag in the subtitler, so playback is never interrupted
+    public void setSubtitlesEnabled(boolean enabled) {
+        this.subtitler.setEnabled(enabled);
+    }
+
+    public boolean isSubtitlesEnabled() {
+        return this.subtitler.isEnabled();
+    }
+
     public void play(File file) {
         videoFile = file;
         videoDurationUs = NO_SEEK_REQUEST;
