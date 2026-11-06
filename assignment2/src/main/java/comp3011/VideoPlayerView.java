@@ -340,6 +340,17 @@ public class VideoPlayerView {
         Text cc = new Text(6.5, 18, "CC");
         cc.setFont(Font.font("SansSerif", FontWeight.BOLD, 10));
 
+        
+        Pane pane = new Pane(box, cc);
+        pane.setMinSize(ICON_SIZE, ICON_SIZE);
+        pane.setPrefSize(ICON_SIZE, ICON_SIZE);
+        pane.setMaxSize(ICON_SIZE, ICON_SIZE);
+        
+        // If subtitles are disabled, add a line through the box to indicate that
+        if (!subtitlesEnabled) {
+            pane.getChildren().add(audioLine(4, 25, 24, 3));
+        }
+        return pane;
     }
 
     // Kind of speaker looking thing ...
