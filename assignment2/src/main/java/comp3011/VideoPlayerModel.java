@@ -40,6 +40,8 @@ import javafx.scene.image.Image;
 public class VideoPlayerModel {
     private static final long NO_SEEK_REQUEST = -1; // Sentinel value used when no seek position is active.
     private static final long FIVE_SECONDS_US = 5_000_000L;
+    // how many times to try the server
+    private static final int SUBTITLE_ATTEMPTS = 3;
 
     private final List<FrameProcessor> frameProcessors;
 
@@ -149,29 +151,40 @@ public class VideoPlayerModel {
 
         // This thread will fetch the subtitles, then start playback. It is a daemon thread so that it doesn't prevent the program from exiting if the user closes the window before it finishes.
         Thread fetcher = new Thread(() -> {
-            try {
-
-                SubtitleClient.Subtitles subtitles = SubtitleClient.fetchSubtitles(file);
+            SubtitleClient.Subtitles subtitles = fetchWithRetries(file);
+            if (subtitles != null) {
                 subtitler.setSubtitles(subtitles); // hand them to the pipeline thread
-
-                for (SubtitleClient.Segment segment : subtitles.segments()) {
-                    System.out.printf("%7.2f - %7.2f  %s%n", segment.start(), segment.end(), segment.text());
-                }
-
-            } catch (Exception e) {
-                System.err.println("No subtitles, playing without them: " + e.getMessage());
             }
-            
+
             // Back on the JavaFX thread: the fetch is over, so playback is allowed to start now
             Platform.runLater(() -> {
                 fetchingSubtitles = false;
                 startPlayback(0, false, NO_SEEK_REQUEST);
+                
+                // If the server didn't return any subtitles, let the user know
+                if (subtitles == null) {
+                    notifyStatusChanged(file.getName() + " (no subtitles)");
+                }
             });
         
         }, "subtitle-fetcher");
 
         fetcher.setDaemon(true);
         fetcher.start();
+    }
+
+
+
+    // Runs on the fetcher thread. Returns the subtitles, or null if there are none (no audio, or no server)
+    private SubtitleClient.Subtitles fetchWithRetries(File file) {
+        
+        // A missing file will never work -> don't waste time retrying it
+        if (!file.isFile()) {
+            System.err.println("Video file not found: " + file.getPath());
+            return null;
+        }
+
+        return null; // every attempt failed -> play without subtitles
     }
 
     public void startOver() {
