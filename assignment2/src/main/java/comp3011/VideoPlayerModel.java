@@ -98,6 +98,8 @@ public class VideoPlayerModel {
 
     // draws the subtitles. Always in the pipeline, even without -S, so the button can switch it on later
     private final FrameSubtitler subtitler = new FrameSubtitler(false);
+    // True while subtitles are being fetched. Only used on the JavaFX thread -> no volatile needed
+    private boolean fetchingSubtitles;
     private Audio pendingChunk;
     private int pendingOffset;
 
@@ -142,6 +144,7 @@ public class VideoPlayerModel {
     // transcribe the whole video BEFORE playing. Done on a background thread so the window doesn't freeze,
     private void fetchSubtitlesThenPlay(File file) {
 
+        fetchingSubtitles = true;
         notifyStatusChanged("Generating subtitles...");
 
         // This thread will fetch the subtitles, then start playback. It is a daemon thread so that it doesn't prevent the program from exiting if the user closes the window before it finishes.
@@ -159,7 +162,11 @@ public class VideoPlayerModel {
                 System.err.println("No subtitles, playing without them: " + e.getMessage());
             }
             
-            Platform.runLater(() -> startPlayback(0, false, NO_SEEK_REQUEST));
+            // Back on the JavaFX thread: the fetch is over, so playback is allowed to start now
+            Platform.runLater(() -> {
+                fetchingSubtitles = false;
+                startPlayback(0, false, NO_SEEK_REQUEST);
+            });
         
         }, "subtitle-fetcher");
 
@@ -262,6 +269,10 @@ public class VideoPlayerModel {
     }
 
     private void startPlayback(long startTimestampUs, boolean initiallyPaused, long initialRelativeSeekBaseUs) {
+        // Keys like SPACE or LEFT still work when the buttons are disabled -> block them here, in one place
+        if (fetchingSubtitles) {
+            return;
+        }
         closePlaybackResources();
 
         pauseRequested = initiallyPaused;

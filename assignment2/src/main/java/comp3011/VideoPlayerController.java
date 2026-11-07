@@ -93,7 +93,7 @@ public class VideoPlayerController {
     }
 
     public void play(File file) {
-        view.setPlaybackControlsDisabled(false);
+        // The buttons stay disabled while the subtitles are fetched. onPlaybackStateChanged enables them
         model.play(file);
     }
 
@@ -145,6 +145,9 @@ public class VideoPlayerController {
     }
 
     private void onPlaybackStateChanged(boolean playing, boolean paused) {
+        
+        view.setPlaybackControlsDisabled(false);
+
         if (playing && !paused) {
             view.showPauseAction();
         } else {
