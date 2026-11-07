@@ -55,6 +55,10 @@ public class VideoPlayerController {
         view.getStopButton().setOnAction(_ -> stopAndExit());
         view.getAudioButton().setOnAction(_ -> toggleAudioOutput());
         view.showAudioEnabled(model.isAudioOutputEnabled());
+
+        // subtitle button, and its icon starts out matching -S
+        view.getSubtitleButton().setOnAction(_ -> toggleSubtitles());
+        view.showSubtitlesEnabled(model.isSubtitlesEnabled());
     }
 
     public void installKeyboardShortcuts(Scene scene) {
@@ -76,6 +80,9 @@ public class VideoPlayerController {
                 event.consume();
             } else if (event.getCode() == KeyCode.A) {
                 toggleAudioOutput();
+                event.consume();
+            } else if (event.getCode() == KeyCode.S) {
+                toggleSubtitles(); // same as clicking the subtitle button
                 event.consume();
             }
         });
@@ -112,6 +119,12 @@ public class VideoPlayerController {
 
     private void toggleAudioOutput() {
         model.toggleAudioOutput();
+    
+    // Toggle subtitles on/off and update the icon. Playback keeps going, the next frame just draws (or skips) the text
+    private void toggleSubtitles() {
+        boolean enabled = !model.isSubtitlesEnabled();
+        model.setSubtitlesEnabled(enabled);
+        view.showSubtitlesEnabled(enabled);
     }
 
     private void stopAndExit() {
