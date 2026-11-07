@@ -184,6 +184,27 @@ public class VideoPlayerModel {
             return null;
         }
 
+        // Try 3 times
+        for (int attempt = 0; attempt < SUBTITLE_ATTEMPTS; attempt++) {
+            try {
+                return SubtitleClient.fetchSubtitles(file);
+            } 
+            catch (Exception e) {
+                System.err.println("Subtitle attempt " + attempt + " failed: " + e.getMessage());
+                
+                // If this was the last attempt, let the user know that there are no subtitles
+                if (attempt < SUBTITLE_ATTEMPTS) {
+                    String retrying = "Subtitle server unreachable, retrying (" + (attempt + 1) + "/" + SUBTITLE_ATTEMPTS + ")...";
+                    Platform.runLater(() -> notifyStatusChanged(retrying));
+                    
+                    try {
+                        Thread.sleep(attempt * 2000L); // give the network time to come back
+                    } catch (InterruptedException stop) {
+                        return null;
+                    }
+                }
+            }
+        }
         return null; // every attempt failed -> play without subtitles
     }
 
