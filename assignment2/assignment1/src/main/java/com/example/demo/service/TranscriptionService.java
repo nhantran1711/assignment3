@@ -141,7 +141,19 @@ public class TranscriptionService {
 		List<Segment> segments = buildSegments(res);
 		log.info("Subtitle request succeeded. " + segments.size() + " segments, " + res.usageSeconds() + "s billed");
 
+		Subtitles subtitles = new Subtitles(res.duration(), segments);
+		writeCache(cacheFile, subtitles);
+		return subtitles;
+	}
 
+	// Return a path to the cache file for this audio track
+	private static void writeCache(Path cacheFile, Subtitles subtitles) {
+		try {
+			Files.createDirectories(CACHE_DIR);
+			JSON.writeValue(cacheFile.toFile(), subtitles);
+		} catch (Exception e) {
+			log.warn("Could not write cache file " + cacheFile + ": " + e.getMessage());
+		}
 	}
 
 	private record OpenAITranscriptionResponse(String text, Usage usage) {};
