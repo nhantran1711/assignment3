@@ -158,6 +158,21 @@ public class TranscriptionService {
 		}
 	}
 
+	// Read the cache file for this audio track, or return null if it doesn't exist or is unreadable
+	private static Subtitles readCache(Path cacheFile) {
+		// If the cache file doesn't exist, return null
+		if (!Files.exists(cacheFile)) {
+			return null;
+		}
+		// If the cache file exists, try to read it
+		try {
+			return JSON.readValue(cacheFile.toFile(), Subtitles.class);
+		} catch (Exception e) {
+			log.warn("Ignoring unreadable cache file " + cacheFile + ": " + e.getMessage());
+			return null;
+		}
+	}
+
 
 	// Return a path to the cache file for this audio track
 	private static void writeCache(Path cacheFile, Subtitles subtitles) {
