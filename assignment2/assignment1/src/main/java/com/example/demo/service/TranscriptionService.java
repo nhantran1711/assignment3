@@ -1,8 +1,14 @@
 package com.example.demo.service;
 
+import java.io.IOException;
 import java.net.http.HttpClient;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -17,12 +23,18 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.multipart.MultipartFile;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import tools.jackson.databind.json.JsonMapper;
+
 @Service
 public class TranscriptionService {
 	
 	// No subtitles for segments with noSpeechProb > 0.6 & aveLogProb < -1.0
 	private static final double NO_SPEECH_LIMIT = 0.6;
 	private static final double LOG_PROB_LIMIT = -1.0;
+
+	// Disk cache: one JSON file per audio track
+	private static final Path CACHE_DIR = Path.of("subtitle-cache");
+	private static final JsonMapper JSON = JsonMapper.builder().build();
 	
 	private final String apiKey;
 	private final RestClient restClient;
@@ -87,6 +99,16 @@ public class TranscriptionService {
 	public Subtitles transcribeSubtitles(MultipartFile audio) {
 		log.info("Received subtitle request. Audio size: " + audio.getSize() + " bytes");
 
+		// Seen this audio before
+		Path cacheFile = cacheFileFor(audio);
+		Subtitles cached = readCache(cacheFile);
+
+		// If we have a cached version, return it
+		if (cached != null) {
+			log.info("Cache hit: " + cacheFile.getFileName());
+			return cached;
+		}
+
 		MultiValueMap<String, Object> map = new LinkedMultiValueMap<>();
 		map.add("model", "whisper-1");
 		map.add("file", audio.getResource());
@@ -118,8 +140,8 @@ public class TranscriptionService {
 		// Build segments from the response
 		List<Segment> segments = buildSegments(res);
 		log.info("Subtitle request succeeded. " + segments.size() + " segments, " + res.usageSeconds() + "s billed");
-		
-		return new Subtitles(res.duration(), segments);
+
+
 	}
 
 	private record OpenAITranscriptionResponse(String text, Usage usage) {};
