@@ -146,6 +146,19 @@ public class TranscriptionService {
 		return subtitles;
 	}
 
+	
+	// Return a path to the cache file for this audio track
+	private static Path cacheFileFor(MultipartFile audio) {
+		try {
+			byte[] hash = MessageDigest.getInstance("SHA-256").digest(audio.getBytes());
+
+			return CACHE_DIR.resolve(HexFormat.of().formatHex(hash) + ".json");
+		} catch (IOException | NoSuchAlgorithmException e) {
+			throw new IllegalStateException("Could not read the uploaded audio", e);
+		}
+	}
+
+
 	// Return a path to the cache file for this audio track
 	private static void writeCache(Path cacheFile, Subtitles subtitles) {
 		try {
