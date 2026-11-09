@@ -532,6 +532,13 @@ public class VideoPlayerModel {
 
 
     private void finishPlayback() {
+        
+        // the file is gone -> a clear message
+        if (!videoFile.isFile()) {
+            mediaLost();
+            return;
+        }
+
         long endTimestampUs = videoDurationUs != NO_SEEK_REQUEST
                 ? videoDurationUs
                 : currentTimestampUs;
@@ -546,9 +553,24 @@ public class VideoPlayerModel {
 
     private void handlePlaybackError(Exception e) {
         e.printStackTrace();
+
+        // the file is gone -> a clear message
+        if (!videoFile.isFile()) {
+            mediaLost();
+            return;
+        }
+
         closePlaybackResources();
         pauseRequested = false;
         notifyStatusChanged("Error: " + e.getMessage());
+        notifyPlaybackStateChanged();
+    }
+
+    // media file lost. Stop the threads but keep the position
+    private void mediaLost() {
+        closePlaybackResources();
+        pauseRequested = true;
+        notifyStatusChanged("Media file lost: " + videoFile.getName() + " - reconnect it, then press play");
         notifyPlaybackStateChanged();
     }
 
