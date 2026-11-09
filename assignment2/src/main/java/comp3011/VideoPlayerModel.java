@@ -40,8 +40,8 @@ import javafx.scene.image.Image;
 public class VideoPlayerModel {
     private static final long NO_SEEK_REQUEST = -1; // Sentinel value used when no seek position is active.
     private static final long FIVE_SECONDS_US = 5_000_000L;
-    // how many times to try the server
-    private static final int SUBTITLE_ATTEMPTS = 3;
+    // how long to wait between tries at the subtitle server
+    private static final long SUBTITLE_RETRY_MS = 5000;
 
     private final List<FrameProcessor> frameProcessors;
 
@@ -151,61 +151,59 @@ public class VideoPlayerModel {
 
         // This thread will fetch the subtitles, then start playback. It is a daemon thread so that it doesn't prevent the program from exiting if the user closes the window before it finishes.
         Thread fetcher = new Thread(() -> {
-            SubtitleClient.Subtitles subtitles = fetchWithRetries(file);
-            if (subtitles != null) {
-                subtitler.setSubtitles(subtitles); // hand them to the pipeline thread
+
+            // A missing file will never work -> don't retry, just let playback report the error
+            if (!file.isFile()) {
+                startPlaybackLater(null);
+                return;
             }
 
-            // Back on the JavaFX thread: the fetch is over, so playback is allowed to start now
-            Platform.runLater(() -> {
-                fetchingSubtitles = false;
-                startPlayback(0, false, NO_SEEK_REQUEST);
-                
-                // If the server didn't return any subtitles, let the user know
-                if (subtitles == null) {
-                    notifyStatusChanged(file.getName() + " (no subtitles)");
+            boolean playbackStarted = false;
+
+            // Keep trying until the subtitles arrive, so they resume once the network comes back
+            while (true) {
+                try {
+                    subtitler.setSubtitles(SubtitleClient.fetchSubtitles(file)); // hand them to the pipeline thread
+
+                    if (!playbackStarted) {
+                        startPlaybackLater(null); // first try worked: play with subtitles from the start
+                    } else {
+                        Platform.runLater(() -> notifyStatusChanged(file.getName() + " (subtitles ready)"));
+                    }
+                    return;
+
+                } catch (Exception e) {
+                    System.err.println("Subtitles failed, retrying in 5s: " + e.getMessage());
+
+                    // First failure: don't keep the user waiting, play without subtitles for now
+                    if (!playbackStarted) {
+                        startPlaybackLater(file.getName() + " (no subtitles yet, retrying...)");
+                        playbackStarted = true;
+                    }
                 }
-            });
-        
+
+                try {
+                    Thread.sleep(SUBTITLE_RETRY_MS); // give the network time to come back
+                } catch (InterruptedException stop) {
+                    return;
+                }
+            }
         }, "subtitle-fetcher");
 
         fetcher.setDaemon(true);
         fetcher.start();
     }
 
-
-
-    // Runs on the fetcher thread. Returns the subtitles, or null if there are none (no audio, or no server)
-    private SubtitleClient.Subtitles fetchWithRetries(File file) {
+    // Called from the fetcher thread: on the JavaFX thread, end the fetch and start the video (status is optional)
+    private void startPlaybackLater(String status) {
         
-        // A missing file will never work -> don't waste time retrying it
-        if (!file.isFile()) {
-            System.err.println("Video file not found: " + file.getPath());
-            return null;
-        }
-
-        // Try 3 times
-        for (int attempt = 0; attempt < SUBTITLE_ATTEMPTS; attempt++) {
-            try {
-                return SubtitleClient.fetchSubtitles(file);
-            } 
-            catch (Exception e) {
-                System.err.println("Subtitle attempt " + attempt + " failed: " + e.getMessage());
-                
-                // If this was the last attempt, let the user know that there are no subtitles
-                if (attempt < SUBTITLE_ATTEMPTS) {
-                    String retrying = "Subtitle server unreachable, retrying (" + (attempt + 1) + "/" + SUBTITLE_ATTEMPTS + ")...";
-                    Platform.runLater(() -> notifyStatusChanged(retrying));
-                    
-                    try {
-                        Thread.sleep(attempt * 2000L); // give the network time to come back
-                    } catch (InterruptedException stop) {
-                        return null;
-                    }
-                }
+        Platform.runLater(() -> {
+            fetchingSubtitles = false;
+            startPlayback(0, false, NO_SEEK_REQUEST);
+            if (status != null) {
+                notifyStatusChanged(status);
             }
-        }
-        return null; // every attempt failed -> play without subtitles
+        });
     }
 
     public void startOver() {
