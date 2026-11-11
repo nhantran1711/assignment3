@@ -119,6 +119,7 @@ public class VideoPlayerController {
 
     private void toggleAudioOutput() {
         model.toggleAudioOutput();
+    };
     
     // Toggle subtitles on/off and update the icon. Playback keeps going, the next frame just draws (or skips) the text
     private void toggleSubtitles() {
