@@ -85,7 +85,7 @@ class CommandLineControllerTest {
 	              -a, --audio        Play audio
 	              -x, --maximise     Open the player maximised
 	              -S, --subtitle-frames  Start with subtitles switched on
-	              -1, --monitor-1   Open the player on display 1
+	              -1, --monitor-1    Open the player on display 1
 	              -2, --monitor-2    Open the player on display 2
 
 	            Frame processors:
