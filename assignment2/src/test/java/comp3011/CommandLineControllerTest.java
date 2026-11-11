@@ -84,7 +84,8 @@ class CommandLineControllerTest {
 	              -h, --help         Show this help message
 	              -a, --audio        Play audio
 	              -x, --maximise     Open the player maximised
-	              -1, --monitor-1    Open the player on display 1
+	              -S, --subtitle-frames  Start with subtitles switched on
+	              -1, --monitor-1   Open the player on display 1
 	              -2, --monitor-2    Open the player on display 2
 
 	            Frame processors:
