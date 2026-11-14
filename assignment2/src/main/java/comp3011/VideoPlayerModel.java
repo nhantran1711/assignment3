@@ -427,6 +427,7 @@ public class VideoPlayerModel {
         // to compare.
         
         if (clock.targetTimeNs(this.readyFrame.info().timestampUs()) <= now)  {
+        	skipLateFrames(now);
         	displayReadyFrame();
         	fetchReadyFrame();
         }
@@ -438,6 +439,16 @@ public class VideoPlayerModel {
     	while (true) {
     		PipelineFrame next = this.pipeline.output().peek();
 
+            // No more frames left
+    		if (next == null) {
+    			return;
+    		}
+
+    		// Left over from before a seek -> throw it away and look again
+    		if (next.epoch() != this.pipeline.currentEpoch()) {
+    			this.pipeline.output().poll();
+    			continue;
+    		}
     		if (next.isEnd() || clock.targetTimeNs(next.info().timestampUs()) > now) {
     			return;
     		}
