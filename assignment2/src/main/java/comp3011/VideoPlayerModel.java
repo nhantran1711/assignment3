@@ -158,6 +158,9 @@ public class VideoPlayerModel {
                 return;
             }
 
+            // Probe the video size early so that the window can be sized correctly before playback starts. This is done on the fetcher thread so that it doesn't block the JavaFX thread, which would freeze the window. The result is passed to the JavaFX thread via Platform.runLater().
+            probeVideoSize(file);
+
             boolean playbackStarted = false;
 
             // Keep trying until the subtitles arrive, so they resume once the network comes back
@@ -192,6 +195,26 @@ public class VideoPlayerModel {
 
         fetcher.setDaemon(true);
         fetcher.start();
+    }
+
+    // Called from the JavaFX thread to start playback after the subtitles have been fetched. The status message is optional, and is null if the first fetch worked.
+    private void probeVideoSize(File file) {
+
+        try (FFmpegFrameGrabber probe = new FFmpegFrameGrabber(file)) {
+
+            probe.start();
+
+            int width = probe.getImageWidth();
+            int height = probe.getImageHeight();
+
+            // If the video size is valid, notify the JavaFX thread to update the window size. This is done on the JavaFX thread via Platform.runLater() to avoid blocking the fetcher thread.
+            if (width > 0 && height > 0) {
+                Platform.runLater(() -> notifyVideoSizeChanged(width, height));
+            }
+        } catch (Exception e) {
+            // Not fatal: the window is sized again when playback opens the file
+            System.err.println("Could not read video size early: " + e.getMessage());
+        }
     }
 
     // Called from the fetcher thread: on the JavaFX thread, end the fetch and start the video (status is optional)
@@ -456,7 +479,7 @@ public class VideoPlayerModel {
     		// The next frame is due too -> drop the current one
     		this.readyFrame = this.pipeline.output().poll();
     		this.readyFrameArrivedTime = now;
-        }
+    	}
     }
     
     // Due video method
