@@ -431,6 +431,22 @@ public class VideoPlayerModel {
         	fetchReadyFrame();
         }
     }
+
+    // Skip late frames until we find one that is due, or the end of the stream
+    private void skipLateFrames(long now) {
+
+    	while (true) {
+    		PipelineFrame next = this.pipeline.output().peek();
+
+    		if (next.isEnd() || clock.targetTimeNs(next.info().timestampUs()) > now) {
+    			return;
+    		}
+
+    		// The next frame is due too -> drop the current one
+    		this.readyFrame = this.pipeline.output().poll();
+    		this.readyFrameArrivedTime = now;
+        }
+    }
     
     // Due video method
     private void writeDueAudio(long now) {
