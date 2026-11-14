@@ -22,6 +22,7 @@ import java.io.File;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -42,6 +43,8 @@ public class VideoPlayerModel {
     private static final long FIVE_SECONDS_US = 5_000_000L;
     // how long to wait between tries at the subtitle server
     private static final long SUBTITLE_RETRY_MS = 5000;
+    // longest we hold playback back waiting for the subtitles; they are added mid-play if they come later
+    private static final long SUBTITLE_MAX_WAIT_MS = 15000;
 
     private final List<FrameProcessor> frameProcessors;
 
@@ -63,7 +66,7 @@ public class VideoPlayerModel {
     private final AnimationTimer playbackTimer = new AnimationTimer() {
         @Override
         public void handle(long now) {
-            pumpPlayback(now);
+            pumpPlayback(System.nanoTime());
         }
     };
 
@@ -161,15 +164,31 @@ public class VideoPlayerModel {
             // Probe the video size early so that the window can be sized correctly before playback starts. This is done on the fetcher thread so that it doesn't block the JavaFX thread, which would freeze the window. The result is passed to the JavaFX thread via Platform.runLater().
             probeVideoSize(file);
 
-            boolean playbackStarted = false;
+            // Set by whichever happens first: the subtitles arriving, a failure, or the wait running out
+            AtomicBoolean playbackStarted = new AtomicBoolean(false);
+
+            // A slow server must not keep the user staring at an empty window: after a while, play without subtitles
+            Thread waitLimit = new Thread(() -> {
+                try {
+                    Thread.sleep(SUBTITLE_MAX_WAIT_MS);
+                } catch (InterruptedException stop) {
+                    return;
+                }
+                if (playbackStarted.compareAndSet(false, true)) {
+                    startPlaybackLater(file.getName() + " (subtitles still generating...)");
+                }
+            }, "subtitle-wait-limit");
+            waitLimit.setDaemon(true);
+            waitLimit.start();
 
             // Keep trying until the subtitles arrive, so they resume once the network comes back
             while (true) {
                 try {
                     subtitler.setSubtitles(SubtitleClient.fetchSubtitles(file)); // hand them to the pipeline thread
+                    waitLimit.interrupt();
 
-                    if (!playbackStarted) {
-                        startPlaybackLater(null); // first try worked: play with subtitles from the start
+                    if (playbackStarted.compareAndSet(false, true)) {
+                        startPlaybackLater(null); // arrived in time: play with subtitles from the start
                     } else {
                         Platform.runLater(() -> notifyStatusChanged(file.getName() + " (subtitles ready)"));
                     }
@@ -179,9 +198,9 @@ public class VideoPlayerModel {
                     System.err.println("Subtitles failed, retrying in 5s: " + e.getMessage());
 
                     // First failure: don't keep the user waiting, play without subtitles for now
-                    if (!playbackStarted) {
+                    if (playbackStarted.compareAndSet(false, true)) {
+                        waitLimit.interrupt();
                         startPlaybackLater(file.getName() + " (no subtitles yet, retrying...)");
-                        playbackStarted = true;
                     }
                 }
 
@@ -342,7 +361,7 @@ public class VideoPlayerModel {
             openPlaybackResources(startTimestampUs);
             
             clock.reset(currentTimestampUs, this.pauseRequested);
-            
+
             playbackOpen = true;
             playbackTimer.start();
 
@@ -411,6 +430,7 @@ public class VideoPlayerModel {
             return;
         }
         
+
         // Worker thread dies lieave its error, its make sure to collec tit
         Exception failure = this.pipeline.getFailure();
         if (failure != null) {
