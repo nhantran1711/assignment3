@@ -195,7 +195,7 @@ public class VideoPlayerModel {
                     return;
 
                 } catch (Exception e) {
-                    System.err.println("Subtitles failed, retrying in 5s: " + e.getMessage());
+                    System.err.println("Subtitles failed (attempt " + attempts + "), retrying: " + e);
 
                     // First failure: don't keep the user waiting, play without subtitles for now
                     if (playbackStarted.compareAndSet(false, true)) {
