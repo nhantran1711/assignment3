@@ -98,6 +98,35 @@ loudness.add(audioFrame);
 		private double sumOfSquares;
 		private int samplesInWindow;
 
+		void add(Frame frame) {
+			// If the frame has no samples, ignore it. This can happen if the video has a silent audio track
+			if (frame.samples == null || frame.samples.length == 0) {
+				return;
+			}
+			
+			// The samples are either 16-bit PCM or 32-bit float
+			Buffer samples = frame.samples[0];
+			if (samples instanceof ShortBuffer shorts) {
+				// Duplicate the buffer
+				ShortBuffer s = shorts.duplicate();
+				
+				// Convert each sample to a double in [-1, 1] and add it to the current slice
+				while (s.hasRemaining()) {
+					addSample(s.get() / 32768.0);
+				}
+			}
+			// The samples are either 16-bit PCM or 32-bit float
+			else if (samples instanceof FloatBuffer floats) {
+				// Duplicate the buffer
+				FloatBuffer f = floats.duplicate();
+
+				// Convert each sample to a double in [-1, 1] and add it to the current slice
+				while (f.hasRemaining()) {
+					addSample(f.get());
+				}
+			}
+		}
+
 		// Add the samples of a frame to the current 50ms slice. When the slice is full, compute its loudness and append it to the profile.
 		private void addSample(double sample) {
 			sumOfSquares += sample * sample;
