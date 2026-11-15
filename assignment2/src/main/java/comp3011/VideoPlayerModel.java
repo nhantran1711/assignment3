@@ -19,9 +19,12 @@
 package comp3011;
 
 import java.io.File;
+import java.io.PrintStream;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import java.util.function.BiConsumer;
@@ -39,6 +42,21 @@ import javafx.scene.image.Image;
 
 
 public class VideoPlayerModel {
+    
+    // A single-threaded executor for console logging
+    private static final ExecutorService CONSOLE = Executors.newSingleThreadExecutor(task -> {
+        
+        Thread thread = new Thread(task, "console-log");
+        thread.setDaemon(true);
+
+        return thread;
+    });
+
+    // Print a line without ever blocking the caller
+    static void printLater(PrintStream stream, String line) {
+        CONSOLE.execute(() -> stream.println(line));
+    }
+
     private static final long NO_SEEK_REQUEST = -1; // Sentinel value used when no seek position is active.
     private static final long FIVE_SECONDS_US = 5_000_000L;
     // how long to wait between tries at the subtitle server
