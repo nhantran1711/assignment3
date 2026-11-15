@@ -90,7 +90,7 @@ public class AudioPlayer implements AutoCloseable {
                     "WARNING: Audio write blocked for %dus writing %d bytes, line available before write: %d bytes",
                     elapsedNs / 1000,
                     written,
-                    availableBeforeWrite);
+                    availableBeforeWrite));
         }
         return written;
     }
