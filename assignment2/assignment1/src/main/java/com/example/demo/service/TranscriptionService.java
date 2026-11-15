@@ -179,6 +179,32 @@ public class TranscriptionService {
 		}
 	}
 
+	// 1.0 = perfect match, 0 = no correlation, -1 = perfect anti-correlation
+	private static double correlationAt(double[] clip, double[] track, int offset) {
+		
+		double clipMean = Arrays.stream(clip).average().orElse(0);
+		double trackMean = Arrays.stream(track, offset, offset + clip.length).average().orElse(0);
+		double together = 0, clipSpread = 0, trackSpread = 0;
+		
+		// Check each value in the clip against the corresponding value in the track
+		for (int i = 0; i < clip.length; i++) {
+			double c = clip[i] - clipMean;
+			double t = track[offset + i] - trackMean;
+
+			together += c * t; // positive when both are above (or both below) their own average
+			clipSpread += c * c;
+			trackSpread += t * t;
+		}
+
+		// A nearly flat clip would "match" almost anything, so it never counts
+		if (clipSpread < clip.length * MIN_SPREAD_DB * MIN_SPREAD_DB || trackSpread == 0) {
+			return 0;
+		}
+
+		// Return the correlation coefficient
+		return together / Math.sqrt(clipSpread * trackSpread);
+	}
+
 	// Return a path to the cache file for this audio track
 	private static Path cacheFileFor(MultipartFile audio) {
 		try {
