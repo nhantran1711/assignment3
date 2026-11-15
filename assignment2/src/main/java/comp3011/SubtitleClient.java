@@ -49,6 +49,7 @@ public class SubtitleClient {
 
 	// The HTTP client is reused for all requests, and has a 5s connection timeout
 	private static final HttpClient HTTP = HttpClient.newBuilder()
+			.version(HttpClient.Version.HTTP_1_1)
 			.connectTimeout(Duration.ofSeconds(5))
 			.build();
 
@@ -138,10 +139,14 @@ public class SubtitleClient {
 
 	// Extract the audio from the video, send it to the server, and parse the JSON reply into a Subtitles object
 	public static Subtitles fetchSubtitles(File videoFile) throws Exception {
+		return fetchSubtitles(extractAudio(videoFile));
+	}
 
-		byte[] mp3 = extractAudio(videoFile);
-		String json = postAudio(mp3);
-
-		return JSON.readValue(json, Subtitles.class);
+	// Send the given mp3 bytes to the server and parse the JSON reply into a Subtitles object
+	public static Subtitles fetchSubtitles(byte[] mp3) throws Exception {
+		if (mp3.length == 0) {
+			throw new IOException("The video has no audio track to transcribe");
+		}
+		return JSON.readValue(postAudio(mp3), Subtitles.class);
 	}
 }
