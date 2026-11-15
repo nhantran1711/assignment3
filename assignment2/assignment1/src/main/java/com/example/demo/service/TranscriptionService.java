@@ -205,6 +205,30 @@ public class TranscriptionService {
 		return together / Math.sqrt(clipSpread * trackSpread);
 	}
 
+	// Return the offset in the track where the clip best matches, or -1 if it doesn't match well enough
+	private static int findOffset(double[] clip, double[] track) {
+		
+		// If the clip is too short, it can't be identified safely
+		if (track == null || track.length < clip.length) {
+			return -1;
+		}
+
+		int bestOffset = -1;
+		double bestScore = MIN_CORRELATION; // anything below this isn't the same audio
+		
+		// Check each possible offset in the track where the clip could fit
+		for (int offset = 0; offset + clip.length <= track.length; offset++) {
+			double score = correlationAt(clip, track, offset);
+			
+			// If this offset is a better match than the previous best, remember it
+			if (score > bestScore) {
+				bestScore = score;
+				bestOffset = offset;
+			}
+		}
+		return bestOffset;
+	}
+
 	// Return a path to the cache file for this audio track
 	private static Path cacheFileFor(MultipartFile audio) {
 		try {
