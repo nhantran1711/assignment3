@@ -229,6 +229,28 @@ public class TranscriptionService {
 		return bestOffset;
 	}
 
+	// Return a copy of the subtitles that only contains the excerpt from fromSeconds to fromSeconds + lengthSeconds
+	private static Subtitles cropToExcerpt(Subtitles full, double fromSeconds, double lengthSeconds) {
+		
+		double endSeconds = fromSeconds + lengthSeconds;
+		
+		// Build a list of segments that are within the excerpt
+		List<Segment> segments = new ArrayList<>();
+		
+		// For each segment in the full subtitles
+		for (Segment s : full.segments()) {
+
+			// If the segment is completely before or after the excerpt, skip it
+			if (s.end() <= fromSeconds || s.start() >= endSeconds) {
+				continue; 
+			}
+
+			// If the segment overlaps the excerpt, add it to the list of segments, with its start and end times adjusted to the excerpt
+			segments.add(new Segment(Math.max(0, s.start() - fromSeconds), Math.min(lengthSeconds, s.end() - fromSeconds), s.text(), words));
+		}
+		return new Subtitles(lengthSeconds, segments);
+	}
+
 	// Return a path to the cache file for this audio track
 	private static Path cacheFileFor(MultipartFile audio) {
 		try {
