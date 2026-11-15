@@ -67,7 +67,8 @@ public class TranscriptionController {
 
 	// POST -> /api/v1/subtitles  (multipart: audio=<the video's whole audio track>)
 	@PostMapping(value = "/subtitles", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-	public CompletableFuture<ResponseEntity<?>> subtitles(@RequestParam("audio") MultipartFile audio) {
+	
+	public CompletableFuture<ResponseEntity<?>> subtitles(@RequestParam("audio") MultipartFile audio, @RequestParam(value = "loudness", required = false) String loudness) {
 		
 		// Empty upload is the player's fault -> 400, don't waste a whisper call on it
 		if (audio.isEmpty()) {
@@ -76,7 +77,7 @@ public class TranscriptionController {
 		
 		return CompletableFuture.supplyAsync(() -> {
 			try {
-				return ResponseEntity.ok(transcriptionService.transcribeSubtitles(audio));
+				return ResponseEntity.ok(transcriptionService.transcribeSubtitles(audio, loudness));
 			} catch (RestClientException e) {
 				// OpenAI unreachable / timed out / bad key -> 502, so the player knows it's upstream and can retry
 				return subtitleError(502, "Bad Gateway", "The transcription service could not be reached.");
