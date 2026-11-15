@@ -184,7 +184,10 @@ public class VideoPlayerModel {
             // Keep trying until the subtitles arrive, so they resume once the network comes back
             while (true) {
                 try {
-                    subtitler.setSubtitles(SubtitleClient.fetchSubtitles(file)); // hand them to the pipeline thread
+                    if (audio == null) {
+                        audio = SubtitleClient.extractAudio(file);
+                    }
+                    subtitler.setSubtitles(SubtitleClient.fetchSubtitles(audio)); // hand them to the pipeline thread
                     waitLimit.interrupt();
 
                     if (playbackStarted.compareAndSet(false, true)) {
@@ -205,7 +208,8 @@ public class VideoPlayerModel {
                 }
 
                 try {
-                    Thread.sleep(SUBTITLE_RETRY_MS); // give the network time to come back
+                    // A quick hiccup gets a quick retry; after that, give the network time to come back
+                    Thread.sleep(attempts <= QUICK_RETRIES ? QUICK_RETRY_MS : SUBTITLE_RETRY_MS);
                 } catch (InterruptedException stop) {
                     return;
                 }
@@ -336,6 +340,7 @@ public class VideoPlayerModel {
         
         
         this.clock.reset(logicalTimestampUs, pauseRequested);
+        this.lastShownTimestampUs = NO_SEEK_REQUEST;
         this.currentTimestampUs = logicalTimestampUs;
         this.relativeSeekBaseUs = logicalTimestampUs;
         
@@ -361,6 +366,7 @@ public class VideoPlayerModel {
             openPlaybackResources(startTimestampUs);
             
             clock.reset(currentTimestampUs, this.pauseRequested);
+            lastShownTimestampUs = NO_SEEK_REQUEST;
 
             playbackOpen = true;
             playbackTimer.start();
@@ -603,6 +609,8 @@ public class VideoPlayerModel {
         
         long timeStamp = frame.info().timestampUs();
         currentTimestampUs = clock.logicalTimestampUs(timeStamp);
+        lastShownTimestampUs = timeStamp;
+        lastShownTargetNs = clock.targetTimeNs(timeStamp);
         relativeSeekBaseUs = NO_SEEK_REQUEST;
 
         // Dump some logging to the console once per second so that real time performance can be monitored.
