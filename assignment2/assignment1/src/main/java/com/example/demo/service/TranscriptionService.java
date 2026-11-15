@@ -2,12 +2,14 @@ package com.example.demo.service;
 
 import java.io.IOException;
 import java.net.http.HttpClient;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.List;
 
@@ -34,6 +36,14 @@ public class TranscriptionService {
 
 	// Disk cache: one JSON file per audio track
 	private static final Path CACHE_DIR = Path.of("subtitle-cache");
+	private static final String PROFILE_SUFFIX = ".loudness";
+
+	// Excerpt matching
+	private static final double SECONDS_PER_PROFILE_VALUE = 0.05;
+	private static final int MIN_PROFILE_VALUES = 100;     // clips under 5s are too short to identify safely
+	private static final double MIN_CORRELATION = 0.9;     // how closely the loudness must follow the cached track
+	private static final double MIN_SPREAD_DB = 3.0;       // a nearly flat profile could match anything
+
 	private static final JsonMapper JSON = JsonMapper.builder().build();
 	
 	private final String apiKey;
@@ -96,7 +106,7 @@ public class TranscriptionService {
 	}
 	
 	// transcribe the whole audio track of a video with whisper-1, with word and segment timings
-	public Subtitles transcribeSubtitles(MultipartFile audio) {
+	public Subtitles transcribeSubtitles(MultipartFile audio, String loudness) {
 		log.info("Received subtitle request. Audio size: " + audio.getSize() + " bytes");
 
 		// Seen this audio before
@@ -108,6 +118,7 @@ public class TranscriptionService {
 			log.info("Cache hit: " + cacheFile.getFileName());
 			return cached;
 		}
+
 
 		MultiValueMap<String, Object> map = new LinkedMultiValueMap<>();
 		map.add("model", "whisper-1");
@@ -174,11 +185,16 @@ public class TranscriptionService {
 	}
 
 
-	// Return a path to the cache file for this audio track
-	private static void writeCache(Path cacheFile, Subtitles subtitles) {
+	// Save the subtitles, plus the audio's loudness profile next to them (<hash>.loudness beside <hash>.json) if sent
+	private static void writeCache(Path cacheFile, Subtitles subtitles, String loudness) {
 		try {
 			Files.createDirectories(CACHE_DIR);
 			JSON.writeValue(cacheFile.toFile(), subtitles);
+			
+			// If the loudness profile was sent, save it too
+			if (loudness != null && !loudness.isBlank()) {
+				Files.writeString(Path.of(cacheFile.toString().replace(".json", PROFILE_SUFFIX)), loudness);
+			}
 		} catch (Exception e) {
 			log.warn("Could not write cache file " + cacheFile + ": " + e.getMessage());
 		}
