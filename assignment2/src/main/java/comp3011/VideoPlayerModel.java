@@ -227,7 +227,7 @@ public class VideoPlayerModel {
                     return;
 
                 } catch (Exception e) {
-                    System.err.println("Subtitles failed (attempt " + attempts + "), retrying: " + e);
+                    printLater(System.err, "Subtitles failed (attempt " + attempts + "), retrying: " + e);
 
                     // First failure: don't keep the user waiting, play without subtitles for now
                     if (playbackStarted.compareAndSet(false, true)) {
@@ -265,7 +265,7 @@ public class VideoPlayerModel {
             }
         } catch (Exception e) {
             // Not fatal: the window is sized again when playback opens the file
-            System.err.println("Could not read video size early: " + e.getMessage());
+            printLater(System.err, "Could not read video size early: " + e.getMessage());
         }
     }
 
