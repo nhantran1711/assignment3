@@ -86,8 +86,8 @@ public class AudioPlayer implements AutoCloseable {
         long elapsedNs = System.nanoTime() - startNs;
         if (elapsedNs >= WRITE_TRACE_THRESHOLD_NS) {
             // Hopefully you'll never see this.
-            System.out.printf(
-                    "WARNING: Audio write blocked for %dus writing %d bytes, line available before write: %d bytes%n",
+            VideoPlayerModel.printLater(System.out, String.format(
+                    "WARNING: Audio write blocked for %dus writing %d bytes, line available before write: %d bytes",
                     elapsedNs / 1000,
                     written,
                     availableBeforeWrite);
