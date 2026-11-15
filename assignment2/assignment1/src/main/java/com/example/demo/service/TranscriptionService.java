@@ -277,6 +277,41 @@ public class TranscriptionService {
 		return new Subtitles(lengthSeconds, segments);
 	}
 
+	// Find a cached transcription that matches the given loudness profile, and return it. Returns null if none found.
+	private Subtitles findExcerpt(String loudness) {
+		double[] clip = parseLoudness(loudness);
+		
+		// If the clip is null, too short, or the cache directory doesn't exist, return null
+		if (clip == null || clip.length < MIN_PROFILE_VALUES || !Files.isDirectory(CACHE_DIR)) {
+			return null; 
+		}
+
+		try (DirectoryStream<Path> profiles = Files.newDirectoryStream(CACHE_DIR, "*" + PROFILE_SUFFIX)) {
+			// For each cached loudness profile, see if it matches the clip
+			for (Path profile : profiles) {
+				
+				int offset = findOffset(clip, parseLoudness(Files.readString(profile)));
+
+				Subtitles full = null;
+
+				// If the clip matches the profile, read the corresponding subtitles from the cache
+				if (offset >= 0) {
+					Path cachePath = Path.of(profile.toString().replace(PROFILE_SUFFIX, ".json"));
+					full = readCache(cachePath);
+				}
+
+				// If we found a matching excerpt, return it
+				if (full != null) {
+					log.info("Excerpt cache hit: " + profile.getFileName() + " from " + offset * SECONDS_PER_PROFILE_VALUE + "s");
+					return cropToExcerpt(full, offset * SECONDS_PER_PROFILE_VALUE, clip.length * SECONDS_PER_PROFILE_VALUE);
+				}
+			}
+		} catch (IOException e) {
+			log.warn("Could not search the subtitle cache: " + e.getMessage());
+		}
+		return null;
+	}
+
 	// Return a path to the cache file for this audio track
 	private static Path cacheFileFor(MultipartFile audio) {
 		try {
