@@ -5,7 +5,7 @@ package comp3011;
  * Author: Simon Tran a3157542
  *
  * Purpose: Get the subtitles for a video from the web server
- * -> extract the audio track -> send it to POST /api/v1/subtitles and parse the reply. 
+ * -> extract the audio track -> send it to POST /api/v1/subtitles and parse the reply.
  * Run off the JavaFX thread.
  */
 
@@ -48,7 +48,7 @@ public class SubtitleClient {
 	private static final URI SUBTITLES_URL = URI.create("http://localhost:8080/api/v1/subtitles");
 
 
-	// Same shape as the server's Transcription Service. 
+	// Same shape as the server's Transcription Service.
 	// Times are seconds from the start of the media
 	public record Subtitles(double duration, List<Segment> segments) {}
 	public record Segment(double start, double end, String text, List<Word> words) {}
@@ -70,7 +70,7 @@ public class SubtitleClient {
 
 		// try-with-resources: both get closed automatically at the end, even if something throws
 		try (FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(videoFile);
-			
+
 			FFmpegFrameRecorder recorder = createMp3Recorder(mp3Bytes)) {
 
 			// Configure the grabber to read only the audio track, and the recorder to write mono 16kHz mp3
@@ -83,7 +83,7 @@ public class SubtitleClient {
 			Frame audioFrame = grabber.grabSamples();
 
 			while (audioFrame != null) {
-loudness.add(audioFrame);
+				loudness.add(audioFrame);
 				recorder.record(audioFrame);
 				audioFrame = grabber.grabSamples();
 			}
@@ -141,7 +141,7 @@ loudness.add(audioFrame);
 				if (!profile.isEmpty()) {
 					profile.append(',');
 				}
-				
+
 				// Append the loudness of this slice to the profile, rounded to 1 decimal place
 				profile.append(String.format(Locale.ROOT, "%.1f", db));
 				sumOfSquares = 0;
@@ -156,9 +156,9 @@ loudness.add(audioFrame);
 
 	// An mp3 encoder that writes into the given byte stream: mono, 16kHz, 32 kbps
 	private static FFmpegFrameRecorder createMp3Recorder(ByteArrayOutputStream output) {
-		
+
 		FFmpegFrameRecorder recorder = new FFmpegFrameRecorder(output, MONO);
-		
+
 		recorder.setFormat("mp3");
 		recorder.setAudioCodec(avcodec.AV_CODEC_ID_MP3);
 		recorder.setSampleRate(SAMPLE_RATE);
@@ -186,7 +186,7 @@ loudness.add(audioFrame);
 		body.writeBytes(audio.mp3());
 		body.writeBytes(loudnessPart.getBytes(StandardCharsets.UTF_8));
 		body.writeBytes(footer.getBytes(StandardCharsets.UTF_8));
-		
+
 		return body.toByteArray();
 	}
 
