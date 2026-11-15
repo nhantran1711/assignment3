@@ -244,7 +244,27 @@ public class TranscriptionService {
 			if (s.end() <= fromSeconds || s.start() >= endSeconds) {
 				continue; 
 			}
+			// Build a list of words that are within the excerpt
+			List<Word> words = new ArrayList<>();
+			
+			// For each word in the segment, if it is within the excerpt, add it to the list of words
+			List<Word> sourceWords = s.words();
 
+			// If the segment has no words, skip it
+			if (sourceWords != null) {
+				
+				// For each word in the segment
+				for (Word word : sourceWords) {
+					
+					// If the word is within the excerpt, add it to the list of words
+					if (word.start() >= fromSeconds && word.start() < endSeconds) {
+						double start = word.start() - fromSeconds;
+						double end = Math.min(lengthSeconds, word.end() - fromSeconds);
+
+						words.add(new Word(start, end, word.word()));
+					}
+				}
+			}
 			// If the segment overlaps the excerpt, add it to the list of segments, with its start and end times adjusted to the excerpt
 			segments.add(new Segment(Math.max(0, s.start() - fromSeconds), Math.min(lengthSeconds, s.end() - fromSeconds), s.text(), words));
 		}
