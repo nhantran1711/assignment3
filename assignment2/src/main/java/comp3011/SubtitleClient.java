@@ -16,9 +16,13 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.Buffer;
+import java.nio.FloatBuffer;
+import java.nio.ShortBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
+import java.util.Locale;
 
 import org.bytedeco.ffmpeg.global.avcodec;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
@@ -35,6 +39,9 @@ public class SubtitleClient {
 	private static final int SAMPLE_RATE = 16000;
 	private static final int BITRATE = 32000;
 
+	private static final int LOUDNESS_WINDOW_SAMPLES = SAMPLE_RATE / 20;
+	private static final double LOUDNESS_FLOOR_DB = -60.0;
+
 	// Marks where the file starts and ends inside the request body
 	private static final String BOUNDARY = "boundary";
 
@@ -47,15 +54,19 @@ public class SubtitleClient {
 	public record Segment(double start, double end, String text, List<Word> words) {}
 	public record Word(double start, double end, String word) {}
 
+	// The audio track as a small mp3, plus its loudness profile (comma separated dB values, one per 50ms)
+	public record ExtractedAudio(byte[] mp3, String loudness) {}
+
 	// The HTTP client is reused for all requests, and has a 5s connection timeout
 	private static final HttpClient HTTP = HttpClient.newBuilder()
 			.version(HttpClient.Version.HTTP_1_1)
 			.connectTimeout(Duration.ofSeconds(5))
 			.build();
 
-	// Read only the audio from the video file and return it as a small mono mp3 (kept in memory)
-	static byte[] extractAudio(File videoFile) throws Exception {
+	// Read only the audio from the video file and return it as a small mono mp3 (kept in memory) + its loudness
+	static ExtractedAudio extractAudio(File videoFile) throws Exception {
 		ByteArrayOutputStream mp3Bytes = new ByteArrayOutputStream();
+		LoudnessMeter loudness = new LoudnessMeter();
 
 		// try-with-resources: both get closed automatically at the end, even if something throws
 		try (FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(videoFile);
