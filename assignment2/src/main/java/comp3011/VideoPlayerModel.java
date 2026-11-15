@@ -43,6 +43,9 @@ public class VideoPlayerModel {
     private static final long FIVE_SECONDS_US = 5_000_000L;
     // how long to wait between tries at the subtitle server
     private static final long SUBTITLE_RETRY_MS = 5000;
+    // the first few retries come quickly, since most failures are one-off connection hiccups
+    private static final int QUICK_RETRIES = 3;
+    private static final long QUICK_RETRY_MS = 500;
     // longest we hold playback back waiting for the subtitles; they are added mid-play if they come later
     private static final long SUBTITLE_MAX_WAIT_MS = 15000;
 
@@ -92,6 +95,11 @@ public class VideoPlayerModel {
     private FramePipeline pipeline;
     private PipelineFrame readyFrame;
     private long readyFrameArrivedTime;
+    // Media timestamp and due time of the last frame put on screen, to spot jumps. NO_SEEK_REQUEST after a start/seek
+    private long lastShownTimestampUs = NO_SEEK_REQUEST;
+    private long lastShownTargetNs;
+    // Two frames further apart than this are a jump in the file's timestamps, not normal playback
+    private static final long MAX_TIMESTAMP_GAP_US = 1_000_000L;
 
 
     private long relativeSeekBaseUs = NO_SEEK_REQUEST;
@@ -181,8 +189,11 @@ public class VideoPlayerModel {
             waitLimit.setDaemon(true);
             waitLimit.start();
 
-            // Keep trying until the subtitles arrive, so they resume once the network comes back
+            // Extract the audio and send it to the server. If it fails, retry a few times, then give up and play without subtitles. The server is expected to be local, so this should be fast.
+            byte[] audio = null;
+            int attempts = 0;
             while (true) {
+                attempts++;
                 try {
                     if (audio == null) {
                         audio = SubtitleClient.extractAudio(file);
@@ -479,7 +490,7 @@ public class VideoPlayerModel {
         if (isTimestampJump(this.readyFrame, lastShownTimestampUs)) {
             clock.rebase(this.readyFrame.info().timestampUs(), lastShownTargetNs + videoFrameDurationUs * 1_000L, currentTimestampUs + videoFrameDurationUs);
         }
-        
+
         if (clock.targetTimeNs(this.readyFrame.info().timestampUs()) <= now)  {
         	skipLateFrames(now);
         	displayReadyFrame();
@@ -529,7 +540,7 @@ public class VideoPlayerModel {
 
         return gapUs > MAX_TIMESTAMP_GAP_US || gapUs < -MAX_TIMESTAMP_GAP_US;
     }
-    
+
     // Due video method
     private void writeDueAudio(long now) {
     	// Check if avaialbe
