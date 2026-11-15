@@ -208,7 +208,7 @@ public class VideoPlayerModel {
             waitLimit.start();
 
             // Extract the audio and send it to the server. If it fails, retry a few times, then give up and play without subtitles. The server is expected to be local, so this should be fast.
-            byte[] audio = null;
+            SubtitleClient.ExtractedAudio audio = null;
             int attempts = 0;
             while (true) {
                 attempts++;
