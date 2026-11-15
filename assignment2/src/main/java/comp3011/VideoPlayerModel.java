@@ -643,7 +643,7 @@ public class VideoPlayerModel {
         relativeSeekBaseUs = NO_SEEK_REQUEST;
 
         // Dump some logging to the console once per second so that real time performance can be monitored.
-        // Goes through ConsoleLog: a blocked console must never freeze the JavaFX thread (and so the video).
+        // Goes through printLater: a blocked console must never freeze the JavaFX thread (and so the video).
         if (intFrameRate > 0 && frame.info().frameNumber() % intFrameRate == 0) {
             long remainingUs = (clock.targetTimeNs(timeStamp) - this.readyFrameArrivedTime) / 1_000L;
             String colour = remainingUs < 0 ? "31" : "32";
