@@ -119,6 +119,12 @@ public class TranscriptionService {
 			return cached;
 		}
 
+		// If the client sent a loudness profile, see if it matches an excerpt of a cached track
+		Subtitles excerpt = findExcerpt(loudness);
+		if (excerpt != null) {
+			writeCache(cacheFile, excerpt, loudness);
+			return excerpt;
+		}
 
 		MultiValueMap<String, Object> map = new LinkedMultiValueMap<>();
 		map.add("model", "whisper-1");
