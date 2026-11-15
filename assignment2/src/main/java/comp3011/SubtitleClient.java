@@ -83,13 +83,14 @@ public class SubtitleClient {
 			Frame audioFrame = grabber.grabSamples();
 
 			while (audioFrame != null) {
+loudness.add(audioFrame);
 				recorder.record(audioFrame);
 				audioFrame = grabber.grabSamples();
 			}
 		}
 
 		// The recorder is closed now, so all of the mp3 has been written out
-		return mp3Bytes.toByteArray();
+		return new ExtractedAudio(mp3Bytes.toByteArray(), loudness.profile());
 	}
 
 	// An mp3 encoder that writes into the given byte stream: mono, 16kHz, 32 kbps
@@ -107,18 +108,22 @@ public class SubtitleClient {
 
 
 
-	// Create a multipart/form-data request body containing the given mp3 bytes
-	private static byte[] multipartBody(byte[] mp3) {
-		// The request body is just a header, the mp3 bytes, and a footer
-		String header = "--" + BOUNDARY + "\r\n"
+	// Create a multipart/form-data request body: the mp3 file, then the loudness profile as a plain text field
+	private static byte[] multipartBody(ExtractedAudio audio) {
+		String audioHeader = "--" + BOUNDARY + "\r\n"
 				+ "Content-Disposition: form-data; name=\"audio\"; filename=\"audio.mp3\"\r\n"
 				+ "Content-Type: audio/mpeg\r\n"
 				+ "\r\n";
+		String loudnessPart = "\r\n--" + BOUNDARY + "\r\n"
+				+ "Content-Disposition: form-data; name=\"loudness\"\r\n"
+				+ "\r\n"
+				+ audio.loudness();
 		String footer = "\r\n--" + BOUNDARY + "--\r\n";
 
 		ByteArrayOutputStream body = new ByteArrayOutputStream();
-		body.writeBytes(header.getBytes(StandardCharsets.UTF_8));
-		body.writeBytes(mp3);
+		body.writeBytes(audioHeader.getBytes(StandardCharsets.UTF_8));
+		body.writeBytes(audio.mp3());
+		body.writeBytes(loudnessPart.getBytes(StandardCharsets.UTF_8));
 		body.writeBytes(footer.getBytes(StandardCharsets.UTF_8));
 		
 		return body.toByteArray();
