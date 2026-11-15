@@ -36,6 +36,12 @@ public class FrameDecoder implements Runnable{
 	private volatile Exception failure;
 	private final BlockingQueue<PipelineFrame> output = new ArrayBlockingQueue<>(QUEUE_CAPACITY);
 	private int currentEpoch;   // touched only by the decoder thread
+
+	// Recovery from a read error mid-file (decoder thread only)
+	private static final long END_SLACK_US = 1_000_000L;
+	private static final int MAX_RECOVERY_ATTEMPTS = 20;
+	private long lastVideoTimestampUs;
+	private int recoveryAttempts;
 	
 	// This gonna be use to  proof its faster
 	private final String mediaName;
@@ -174,6 +180,8 @@ public class FrameDecoder implements Runnable{
 				// If we have a task
 				if (seek != null) {
 				    this.grabber.setTimestamp(seek.timestampUs());
+				    this.lastVideoTimestampUs = seek.timestampUs();
+				    this.recoveryAttempts = 0;
 				    this.currentEpoch = seek.epoch();
 				    this.output.clear();
 				    this.audioOutput.clear();
@@ -187,6 +195,14 @@ public class FrameDecoder implements Runnable{
 				
 				// If the frame
 				Frame frame = this.grabber.grab();
+
+				// If the frame is null, we might be at the end of the file, or we might have hit a bad spot in the file. If we can skip a bad spot, do so and try again. Otherwise, treat it as the end of the file.
+				if (frame == null && canSkipBadSpot()) {
+					this.recoveryAttempts++;
+					this.grabber.setTimestamp(this.lastVideoTimestampUs + 2L * Math.max(1, this.videoInfo.frameDurationUs()));
+					continue;
+				}
+
 				if (frame == null) {
 					isEnd = true;
 					publish(PipelineFrame.endOfStream(currentEpoch));
@@ -201,6 +217,7 @@ public class FrameDecoder implements Runnable{
 				
 				// Get info
 				InfoFrame info = new InfoFrame(this.grabber.getFrameNumber(), grabber.getTimestamp());
+				this.lastVideoTimestampUs = info.timestampUs();
 				publish(new PipelineFrame(frame.clone(), info, currentEpoch));
 				
 				
@@ -232,7 +249,7 @@ public class FrameDecoder implements Runnable{
 
 		return videoHasLength && notNearEnd && hasAttemptsRemaining;
 	}
-	
+
 	// Blocks while the queue is full, but gives up if a seek or stop arrives
     private void publish(PipelineFrame frame) throws InterruptedException {
     	
