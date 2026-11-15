@@ -92,6 +92,38 @@ loudness.add(audioFrame);
 		// The recorder is closed now, so all of the mp3 has been written out
 		return new ExtractedAudio(mp3Bytes.toByteArray(), loudness.profile());
 	}
+	// Adds up the samples of each 50ms slice and turns it into a loudness (RMS, in dB)
+	private static final class LoudnessMeter {
+		private final StringBuilder profile = new StringBuilder();
+		private double sumOfSquares;
+		private int samplesInWindow;
+
+		// Add the samples of a frame to the current 50ms slice. When the slice is full, compute its loudness and append it to the profile.
+		private void addSample(double sample) {
+			sumOfSquares += sample * sample;
+			samplesInWindow++;
+
+			// If the slice is full, compute its loudness and append it to the profile
+			if (samplesInWindow == LOUDNESS_WINDOW_SAMPLES) {
+				double meanSquare = sumOfSquares / samplesInWindow;
+				double db = Math.max(LOUDNESS_FLOOR_DB, 10 * Math.log10(meanSquare + 1e-12));
+				
+				// Append a comma if this is not the first slice
+				if (!profile.isEmpty()) {
+					profile.append(',');
+				}
+				
+				// Append the loudness of this slice to the profile, rounded to 1 decimal place
+				profile.append(String.format(Locale.ROOT, "%.1f", db));
+				sumOfSquares = 0;
+				samplesInWindow = 0;
+			}
+		}
+
+		String profile() {
+			return profile.toString(); // a partial slice at the very end is left out
+		}
+	}
 
 	// An mp3 encoder that writes into the given byte stream: mono, 16kHz, 32 kbps
 	private static FFmpegFrameRecorder createMp3Recorder(ByteArrayOutputStream output) {
