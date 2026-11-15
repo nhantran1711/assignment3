@@ -469,6 +469,11 @@ public class VideoPlayerModel {
         // such as: if (!pauseRequested && preparedFrame == null) prepareNextFrame();
         // to compare.
         
+        // If the next frame is a jump in the timestamps, rebase the clock so that it doesn't try to play the jump at the wrong time. This is a bit of a hack, but it works for the test videos.
+        if (isTimestampJump(this.readyFrame, lastShownTimestampUs)) {
+            clock.rebase(this.readyFrame.info().timestampUs(), lastShownTargetNs + videoFrameDurationUs * 1_000L, currentTimestampUs + videoFrameDurationUs);
+        }
+        
         if (clock.targetTimeNs(this.readyFrame.info().timestampUs()) <= now)  {
         	skipLateFrames(now);
         	displayReadyFrame();
@@ -496,10 +501,27 @@ public class VideoPlayerModel {
     			return;
     		}
 
+    		// If the next frame is a jump in the timestamps, don't skip it, just rebase the clock so that it plays at the right time. This is a bit of a hack, but it works for the test videos.
+    		if (isTimestampJump(next, this.readyFrame.info().timestampUs())) {
+    			return;
+    		}
+
     		// The next frame is due too -> drop the current one
     		this.readyFrame = this.pipeline.output().poll();
     		this.readyFrameArrivedTime = now;
     	}
+    }
+    
+    // Check if the next frame is a jump in the timestamps, which can happen if the video file has been edited or if the user has seeked. If it is a jump, rebase the clock so that it plays at the right time. This is a bit of a hack, but it works for the test videos.
+    private boolean isTimestampJump(PipelineFrame frame, long previousTimestampUs) {
+        
+        // If the previous timestamp is NO_SEEK_REQUEST, we are at the start of playback or after a seek, so we don't consider it a jump. If the video frame duration is <= 0, we don't have a valid frame rate, so we can't determine if it's a jump. In both cases, return false.
+        if (previousTimestampUs == NO_SEEK_REQUEST || videoFrameDurationUs <= 0) {
+            return false;
+        }
+        long gapUs = frame.info().timestampUs() - previousTimestampUs;
+
+        return gapUs > MAX_TIMESTAMP_GAP_US || gapUs < -MAX_TIMESTAMP_GAP_US;
     }
     
     // Due video method
