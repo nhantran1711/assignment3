@@ -44,6 +44,13 @@ public class PlaybackClock {
 		}
 	}
 	
+	// Rebase the clock: the frame with this timestamp is due at this time, and it represents this position on the timeline
+	public void rebase(long frameTimeStamp, long dueNs, long logicalTimeStamp) {
+		this.firstTimestamp = frameTimeStamp;
+		this.startNs = dueNs;
+		this.logicalBase = logicalTimeStamp;
+	}
+
 	// Check if the thread already started
 	public boolean isStarted() {
 		return this.firstTimestamp != STARTED;
