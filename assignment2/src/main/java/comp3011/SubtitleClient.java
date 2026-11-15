@@ -113,13 +113,13 @@ public class SubtitleClient {
 		return body.toByteArray();
 	}
 
-	// Send the mp3 to the web server and return its JSON reply as text
-	static String postAudio(byte[] mp3) throws IOException, InterruptedException {
+	// Send the audio to the web server and return its JSON reply as text
+	static String postAudio(ExtractedAudio audio) throws IOException, InterruptedException {
 
 		HttpRequest req = HttpRequest.newBuilder(SUBTITLES_URL)
 				.header("Content-Type", "multipart/form-data; boundary=" + BOUNDARY)
 				.timeout(Duration.ofSeconds(200))
-				.POST(HttpRequest.BodyPublishers.ofByteArray(multipartBody(mp3)))
+				.POST(HttpRequest.BodyPublishers.ofByteArray(multipartBody(audio)))
 				.build();
 
 		HttpResponse<String> res = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
@@ -142,11 +142,11 @@ public class SubtitleClient {
 		return fetchSubtitles(extractAudio(videoFile));
 	}
 
-	// Send the given mp3 bytes to the server and parse the JSON reply into a Subtitles object
-	public static Subtitles fetchSubtitles(byte[] mp3) throws Exception {
-		if (mp3.length == 0) {
+	// Send already-extracted audio, so a retry doesn't have to decode the whole video again
+	public static Subtitles fetchSubtitles(ExtractedAudio audio) throws Exception {
+		if (audio.mp3().length == 0) {
 			throw new IOException("The video has no audio track to transcribe");
 		}
-		return JSON.readValue(postAudio(mp3), Subtitles.class);
+		return JSON.readValue(postAudio(audio), Subtitles.class);
 	}
 }
