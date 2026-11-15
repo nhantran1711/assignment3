@@ -4,13 +4,15 @@
  * 
  * Authors:
  *   1. Simon Ratcliffe, in collaboration with GPT-5.6 Terra
- *   2. <student name and student number insert here upon modification>
+ *   2. Simon Tran a3157542
  *
  * Copyright 2026 Simon Ratcliffe
  */
 package comp3011;
 
 import java.util.List;
+
+import org.bytedeco.ffmpeg.global.avutil;
 
 import javafx.application.Application;
 import javafx.geometry.Rectangle2D;
@@ -146,6 +148,9 @@ public class VideoPlayerApp extends Application {
         if (!commandLineController.shouldLaunchApplication()) {
             System.exit(commandLineController.getExitCode());
         }
+
+        // Suppress FFmpeg logging to avoid cluttering the console with warnings and info messages
+        avutil.av_log_set_level(avutil.AV_LOG_ERROR);
 
         launch(args);
     }
