@@ -221,6 +221,18 @@ public class FrameDecoder implements Runnable{
 		}
 	}
 	
+	// Check if the decoder can skip a bad spot in the video file
+	private boolean canSkipBadSpot() {
+		long lengthUs = this.grabber.getLengthInTime();
+
+		// If the video has a known length, and we are not near the end, and we haven't already tried too many times, then we can skip a bad spot
+		boolean videoHasLength = lengthUs > 0;
+		boolean notNearEnd = this.lastVideoTimestampUs + END_SLACK_US < lengthUs;
+		boolean hasAttemptsRemaining = this.recoveryAttempts < MAX_RECOVERY_ATTEMPTS;
+
+		return videoHasLength && notNearEnd && hasAttemptsRemaining;
+	}
+	
 	// Blocks while the queue is full, but gives up if a seek or stop arrives
     private void publish(PipelineFrame frame) throws InterruptedException {
     	
