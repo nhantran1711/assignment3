@@ -153,11 +153,32 @@ public class TranscriptionService {
 		log.info("Subtitle request succeeded. " + segments.size() + " segments, " + res.usageSeconds() + "s billed");
 
 		Subtitles subtitles = new Subtitles(res.duration(), segments);
-		writeCache(cacheFile, subtitles);
+		writeCache(cacheFile, subtitles, loudness); // the loudness lets later excerpts of this audio be recognised
 		return subtitles;
 	}
 
-	
+	// Parse a loudness profile string into an array of doubles
+	private static double[] parseLoudness(String text) {
+		
+		// If the text is null or blank, return null
+		if (text == null || text.isBlank()) {
+			return null;
+		}
+		try {
+			String[] parts = text.split(",");
+			double[] values = new double[parts.length];
+
+			// Parse each part into a double
+			for (int i = 0; i < parts.length; i++) {
+				values[i] = Double.parseDouble(parts[i].trim());
+			}
+
+			return values;
+		} catch (NumberFormatException e) {
+			return null;
+		}
+	}
+
 	// Return a path to the cache file for this audio track
 	private static Path cacheFileFor(MultipartFile audio) {
 		try {
