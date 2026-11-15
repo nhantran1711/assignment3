@@ -227,7 +227,7 @@ public class VideoPlayerModel {
                     return;
 
                 } catch (Exception e) {
-                    ConsoleLog.err("Subtitles failed (attempt " + attempts + "), retrying: " + e);
+                    System.err.println("Subtitles failed (attempt " + attempts + "), retrying: " + e);
 
                     // First failure: don't keep the user waiting, play without subtitles for now
                     if (playbackStarted.compareAndSet(false, true)) {
@@ -265,7 +265,7 @@ public class VideoPlayerModel {
             }
         } catch (Exception e) {
             // Not fatal: the window is sized again when playback opens the file
-            ConsoleLog.err("Could not read video size early: " + e.getMessage());
+            System.err.println("Could not read video size early: " + e.getMessage());
         }
     }
 
@@ -647,7 +647,7 @@ public class VideoPlayerModel {
         if (intFrameRate > 0 && frame.info().frameNumber() % intFrameRate == 0) {
             long remainingUs = (clock.targetTimeNs(timeStamp) - this.readyFrameArrivedTime) / 1_000L;
             String colour = remainingUs < 0 ? "31" : "32";
-            ConsoleLog.out(String.format("Frame headroom is \u001B[%sm%5dus\u001B[0m out of %dus spare.",
+            printLater(System.out, String.format("Frame headroom is \u001B[%sm%5dus\u001B[0m out of %dus spare.",
                     colour,
                     remainingUs,
                     videoFrameDurationUs));
@@ -678,7 +678,7 @@ public class VideoPlayerModel {
     }
 
     private void handlePlaybackError(Exception e) {
-        ConsoleLog.err("Playback error: " + e);
+        printLater(System.err, "Playback error: " + e);
 
         // the file is gone -> a clear message
         if (!videoFile.isFile()) {
