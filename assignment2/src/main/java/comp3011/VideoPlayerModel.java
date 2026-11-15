@@ -209,7 +209,7 @@ public class VideoPlayerModel {
                     return;
 
                 } catch (Exception e) {
-                    System.err.println("Subtitles failed (attempt " + attempts + "), retrying: " + e);
+                    ConsoleLog.err("Subtitles failed (attempt " + attempts + "), retrying: " + e);
 
                     // First failure: don't keep the user waiting, play without subtitles for now
                     if (playbackStarted.compareAndSet(false, true)) {
@@ -247,7 +247,7 @@ public class VideoPlayerModel {
             }
         } catch (Exception e) {
             // Not fatal: the window is sized again when playback opens the file
-            System.err.println("Could not read video size early: " + e.getMessage());
+            ConsoleLog.err("Could not read video size early: " + e.getMessage());
         }
     }
 
@@ -625,17 +625,14 @@ public class VideoPlayerModel {
         relativeSeekBaseUs = NO_SEEK_REQUEST;
 
         // Dump some logging to the console once per second so that real time performance can be monitored.
+        // Goes through ConsoleLog: a blocked console must never freeze the JavaFX thread (and so the video).
         if (intFrameRate > 0 && frame.info().frameNumber() % intFrameRate == 0) {
             long remainingUs = (clock.targetTimeNs(timeStamp) - this.readyFrameArrivedTime) / 1_000L;
-            if (remainingUs < 0) {
-                System.out.printf("Frame headroom is \u001B[31m%5dus\u001B[0m out of %dus spare.%n",
-                        remainingUs,
-                        videoFrameDurationUs);
-            } else {
-                System.out.printf("Frame headroom is \u001B[32m%5dus\u001B[0m out of %dus spare.%n",
-                        remainingUs,
-                        videoFrameDurationUs);
-            }
+            String colour = remainingUs < 0 ? "31" : "32";
+            ConsoleLog.out(String.format("Frame headroom is \u001B[%sm%5dus\u001B[0m out of %dus spare.",
+                    colour,
+                    remainingUs,
+                    videoFrameDurationUs));
         }
 
         notifyFrameReady(this.converter.convert(frame.frame()));
@@ -663,7 +660,7 @@ public class VideoPlayerModel {
     }
 
     private void handlePlaybackError(Exception e) {
-        e.printStackTrace();
+        ConsoleLog.err("Playback error: " + e);
 
         // the file is gone -> a clear message
         if (!videoFile.isFile()) {
